@@ -141,7 +141,7 @@ function App() {
 
           // Fetch all data in parallel - use the public endpoints
           const [jobsData, housesData, carsData, itemsData] = await Promise.all([
-            fetchData('/api/jobs/public'),
+            fetchData('/api/jobs'),
             fetchData('/api/houses/public'),
             fetchData('/api/cars/public'),
             fetchData('/api/items/public')
