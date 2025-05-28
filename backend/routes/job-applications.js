@@ -41,31 +41,6 @@ const upload = multer({
   }
 });
 
-// Create DB table if it doesn't exist
-const ensureApplicationsTable = async () => {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS job_applications (
-        id SERIAL PRIMARY KEY,
-        job_id INTEGER REFERENCES job_listings(id) ON DELETE CASCADE,
-        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-        cover_letter TEXT,
-        resume_path TEXT,
-        phone VARCHAR(20),
-        availability TEXT,
-        status VARCHAR(20) DEFAULT 'pending',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE (job_id, user_id)
-      )
-    `);
-    return true;
-  } catch (err) {
-    console.error('Error creating job_applications table:', err);
-    return false;
-  }
-};
-
 // Apply for a job
 router.post('/:jobId/apply', checkAuthMiddleware, upload.single('resume'), async (req, res) => {
   const { jobId } = req.params; // This will be available due to mergeParams in the router setup
@@ -83,7 +58,7 @@ router.post('/:jobId/apply', checkAuthMiddleware, upload.single('resume'), async
     // if it's idempotent and doesn't interfere with ongoing transactions.
     // However, for consistency in a transactional operation, all queries should ideally use the same client.
     // For now, we'll assume ensureApplicationsTable is safe to call as is.
-    await ensureApplicationsTable();
+    // await ensureApplicationsTable(); // Removed
 
     // Check if job exists
     const jobCheck = await client.query('SELECT id FROM job_listings WHERE id = $1', [jobId]);
@@ -181,8 +156,7 @@ router.get('/:jobId/applications/check', checkAuthMiddleware, async (req, res) =
   const userId = req.user.id;
 
   try {
-    // Ensure table exists
-    await ensureApplicationsTable();
+    // await ensureApplicationsTable(); // Removed
 
     // Check if already applied
     const result = await pool.query(

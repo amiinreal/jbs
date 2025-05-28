@@ -1,49 +1,9 @@
 import pool from '../database.js';
 
-// Create job table if it doesn't exist
-const ensureJobTable = async () => {
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS job_listings (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id),
-        title VARCHAR(255) NOT NULL,
-        company VARCHAR(255) NOT NULL,
-        location VARCHAR(255) NOT NULL,
-        job_type VARCHAR(50) DEFAULT 'full-time',
-        description TEXT,
-        salary VARCHAR(100),
-        experience_required VARCHAR(50),
-        banner_image_url TEXT,
-        image_url TEXT,
-        contact_email VARCHAR(255),
-        contact_phone VARCHAR(50),
-        is_remote BOOLEAN DEFAULT false,
-        is_published BOOLEAN DEFAULT true,
-        views INTEGER DEFAULT 0,
-        application_type VARCHAR(10) DEFAULT 'native',
-        external_application_url TEXT DEFAULT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    // Add new columns if they don't exist, for existing tables
-    await pool.query(`
-      ALTER TABLE job_listings
-      ADD COLUMN IF NOT EXISTS application_type VARCHAR(10) DEFAULT 'native',
-      ADD COLUMN IF NOT EXISTS external_application_url TEXT DEFAULT NULL;
-    `);
-    return true;
-  } catch (err) {
-    console.error('Error ensuring job table exists:', err);
-    return false;
-  }
-};
-
 // Get all job listings
 export const getAllJobs = async (req, res) => {
   try {
-    await ensureJobTable();
+    // await ensureJobTable(); // Removed
     
     const { rows } = await pool.query(`
       SELECT j.*, u.username as posted_by_username, u.company_name
@@ -92,8 +52,7 @@ export const createJob = async (req, res) => {
   } = req.body;
   
   try {
-    // Ensure job table exists
-    await ensureJobTable();
+    // await ensureJobTable(); // Removed
     
     // Validate required fields
     if (!title) {
@@ -194,7 +153,7 @@ export const getJobsByUserId = async (req, res) => {
       return res.status(401).json({ success: false, error: 'Authentication required to view job listings' });
     }
 
-    await ensureJobTable();
+    // await ensureJobTable(); // Removed
     
     const { rows } = await pool.query(`
       SELECT j.*, u.username as posted_by_username, u.company_name
@@ -240,7 +199,7 @@ export const updateJob = async (req, res) => {
   } = req.body;
 
   try {
-    await ensureJobTable();
+    // await ensureJobTable(); // Removed
 
     // First, verify ownership
     const jobResult = await pool.query('SELECT user_id FROM job_listings WHERE id = $1', [jobId]);
@@ -366,7 +325,7 @@ export const deleteJob = async (req, res) => {
   const userId = req.user.id;
 
   try {
-    await ensureJobTable();
+    // await ensureJobTable(); // Removed
 
     // Verify ownership before deleting
     const jobResult = await pool.query('SELECT user_id FROM job_listings WHERE id = $1', [jobId]);

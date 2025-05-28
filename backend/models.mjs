@@ -31,14 +31,74 @@ const createTables = async () => {
         company_name VARCHAR(100),
         company_description TEXT
       );
-
       -- Add phone_number column to users if it doesn't exist
       ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_number VARCHAR(50);
       
+      -- Job Listings Table (depends on users)
+      CREATE TABLE IF NOT EXISTS job_listings (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        company VARCHAR(255) NOT NULL,
+        location VARCHAR(255) NOT NULL,
+        job_type VARCHAR(50) DEFAULT 'full-time',
+        description TEXT,
+        salary VARCHAR(100),
+        experience_required VARCHAR(50),
+        banner_image_url TEXT,
+        -- image_url TEXT, -- This was in ensureJobTable in controller, consider if still needed
+        contact_email VARCHAR(255),
+        contact_phone VARCHAR(50),
+        is_remote BOOLEAN DEFAULT FALSE,
+        is_published BOOLEAN DEFAULT TRUE,
+        views INTEGER DEFAULT 0,
+        application_type VARCHAR(10) DEFAULT 'native', -- 'native' or 'external'
+        external_application_url TEXT DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      -- Ensure new columns for application options are added if table already exists
+      ALTER TABLE job_listings ADD COLUMN IF NOT EXISTS application_type VARCHAR(10) DEFAULT 'native';
+      ALTER TABLE job_listings ADD COLUMN IF NOT EXISTS external_application_url TEXT DEFAULT NULL;
 
-     
+      -- Job Applications Table (depends on job_listings, users)
+      CREATE TABLE IF NOT EXISTS job_applications (
+        id SERIAL PRIMARY KEY,
+        job_id INTEGER REFERENCES job_listings(id) ON DELETE CASCADE,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        cover_letter TEXT,
+        resume_path TEXT,
+        phone VARCHAR(20),
+        availability TEXT,
+        status VARCHAR(20) DEFAULT 'pending', -- e.g., pending, viewed, shortlisted, rejected
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (job_id, user_id)
+      );
 
-        CREATE TABLE IF NOT EXISTS ads (
+      -- Job Custom Questions Table (depends on job_listings)
+      CREATE TABLE IF NOT EXISTS job_custom_questions (
+        id SERIAL PRIMARY KEY,
+        job_id INTEGER REFERENCES job_listings(id) ON DELETE CASCADE NOT NULL,
+        question_text TEXT NOT NULL,
+        question_type VARCHAR(20) NOT NULL, -- 'text', 'textarea', 'select', 'radio', 'checkbox'
+        options TEXT DEFAULT NULL, -- JSON string array for 'select', 'radio', 'checkbox'
+        is_required BOOLEAN DEFAULT FALSE,
+        sort_order INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Job Application Custom Answers Table (depends on job_applications, job_custom_questions)
+      CREATE TABLE IF NOT EXISTS job_application_custom_answers (
+        id SERIAL PRIMARY KEY,
+        application_id INTEGER REFERENCES job_applications(id) ON DELETE CASCADE NOT NULL,
+        question_id INTEGER REFERENCES job_custom_questions(id) ON DELETE CASCADE NOT NULL,
+        answer_text TEXT NOT NULL, -- Could be JSON for multiple selections from checkbox
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS ads (
         id SERIAL PRIMARY KEY,
         title VARCHAR(100),
         description TEXT,
@@ -114,9 +174,8 @@ const createTables = async () => {
         ('Coffee Maker', 'Automatic coffee maker', 50.00, TRUE),
         ('Blender', 'High-speed blender', 70.00, TRUE),
         ('Microwave', 'Compact microwave oven', 90.00, TRUE),
-        ('Vacuum Cleaner', 'Bagless vacuum cleaner', 120.00, TRUE);
-
-
+        ('Vacuum Cleaner', 'Bagless vacuum cleaner', 120.00, TRUE)
+        ON CONFLICT (name) DO NOTHING; -- Added ON CONFLICT to prevent errors on re-runs
       
       CREATE TABLE IF NOT EXISTS company_verification_requests (
         id SERIAL PRIMARY KEY,
@@ -261,30 +320,8 @@ const createTables = async () => {
         CONSTRAINT "session_pkey" PRIMARY KEY ("sid")
       )
     `);
-
-    // Tables for Customizable Application Forms
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS job_custom_questions (
-        id SERIAL PRIMARY KEY,
-        job_id INTEGER REFERENCES job_listings(id) ON DELETE CASCADE NOT NULL,
-        question_text TEXT NOT NULL,
-        question_type VARCHAR(20) NOT NULL, -- 'text', 'textarea', 'select', 'radio', 'checkbox'
-        options TEXT DEFAULT NULL, -- JSON string array for 'select', 'radio', 'checkbox'
-        is_required BOOLEAN DEFAULT FALSE,
-        sort_order INTEGER DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE IF NOT EXISTS job_application_custom_answers (
-        id SERIAL PRIMARY KEY,
-        application_id INTEGER REFERENCES job_applications(id) ON DELETE CASCADE NOT NULL,
-        question_id INTEGER REFERENCES job_custom_questions(id) ON DELETE CASCADE NOT NULL,
-        answer_text TEXT NOT NULL, -- Could be JSON for multiple selections from checkbox
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-    console.log('Custom job question tables created or already exist.');
+    // The console log for custom questions will be removed as they are now part of the main block.
+    // console.log('Custom job question tables created or already exist.'); 
     
     await client.query('COMMIT');
     console.log('All table creations and modifications committed.');
