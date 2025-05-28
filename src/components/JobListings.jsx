@@ -124,7 +124,7 @@ const JobListings = () => {
       // Apply employment type filter - with defensive coding
       if (filterOptions.employmentType) {
         filtered = filtered.filter(job => 
-          job && job.type && job.type.toLowerCase().includes(filterOptions.employmentType.toLowerCase())
+          job && job.job_type && job.job_type.toLowerCase().includes(filterOptions.employmentType.toLowerCase())
         );
       }
       
@@ -154,19 +154,19 @@ const JobListings = () => {
           
           // Extract tags from job if they exist
           const tags = job.tags || [];
-          let type = job && job.type ? job.type.toLowerCase() : '';
+          let jobType = job && job.job_type ? job.job_type.toLowerCase() : '';
           
           return (
             (filterValues.workingSchedule.fullTime && 
-              (tags.includes('Full time') || type.includes('full time'))) ||
+              (tags.includes('Full time') || jobType.includes('full time'))) ||
             (filterValues.workingSchedule.partTime && 
-              (tags.includes('Part time') || type.includes('part time'))) ||
+              (tags.includes('Part time') || jobType.includes('part time'))) ||
             (filterValues.workingSchedule.internship && 
-              (tags.includes('Internship') || type.includes('internship'))) ||
+              (tags.includes('Internship') || jobType.includes('internship'))) ||
             (filterValues.workingSchedule.projectWork && 
-              (tags.includes('Project work') || type.includes('project'))) ||
+              (tags.includes('Project work') || jobType.includes('project'))) ||
             (filterValues.workingSchedule.volunteering && 
-              (tags.includes('Volunteering') || type.includes('volunteer')))
+              (tags.includes('Volunteering') || jobType.includes('volunteer')))
           );
         });
       }
@@ -342,7 +342,7 @@ const JobListings = () => {
     if (!job) return [];
     
     const tags = [];
-    if (job.type) tags.push(job.type);
+    if (job.job_type) tags.push(job.job_type);
     if (job.experience_required) tags.push(job.experience_required);
     if (job.location && job.location.toLowerCase().includes('remote')) tags.push('Remote');
     return tags;
