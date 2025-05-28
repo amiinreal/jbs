@@ -1,0 +1,41 @@
+{
+  "name": "jbs",
+  "version": "1.0.0",
+  "description": "Jobs & Beyond Services platform",
+  "type": "module",
+  "scripts": {
+    "start": "node backend/index.mjs",
+    "dev": "nodemon backend/index.mjs",
+    "client": "cd frontend && npm start",
+    "build": "cd frontend && npm run build",
+    "start:frontend": "node start-dev.mjs",
+    "install-deps": "node install-packages.js",
+    "install-frontend": "node install-frontend.mjs",
+    "install-axios": "npm install axios"
+  },
+  "dependencies": {
+    "@tinymce/tinymce-react": "^4.3.0",
+    "axios": "^1.9.0",
+    "bcrypt": "^5.1.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-session": "^1.17.3",
+    "fs-extra": "^11.1.1",
+    "mime-types": "^2.1.35",
+    "multer": "^1.4.5-lts.1",
+    "pg": "^8.11.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-quill": "^2.0.0",
+    "react-router-dom": "^6.30.1",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.5.0",
+    "concurrently": "^8.2.1",
+    "nodemon": "^3.0.1",
+    "serve": "^14.2.4",
+    "vite": "^4.5.14"
+  }
+}

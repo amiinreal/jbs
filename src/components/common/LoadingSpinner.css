@@ -1,0 +1,156 @@
+/* Loading spinner styles */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 0;
+}
+
+.loading-container-fullpage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+  padding: 2rem 0;
+}
+
+.loading-spinner {
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Spinner sizes */
+.spinner-small {
+  width: 20px;
+  height: 20px;
+  border-width: 2px;
+}
+
+.spinner-medium {
+  width: 40px;
+  height: 40px;
+  border-width: 3px;
+}
+
+.spinner-large {
+  width: 60px;
+  height: 60px;
+  border-width: 4px;
+}
+
+/* Spinner colors */
+.spinner-primary {
+  border: solid rgba(75, 108, 183, 0.1);
+  border-top-color: #4b6cb7;
+}
+
+.spinner-light {
+  border: solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+}
+
+.spinner-dark {
+  border: solid rgba(0, 0, 0, 0.1);
+  border-top-color: #333;
+}
+
+.loading-text {
+  margin-top: 1rem;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.spinner {
+  position: relative;
+  display: inline-block;
+}
+
+.spinner-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  animation: spinner-rotate 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+}
+
+.spinner-inner div {
+  position: absolute;
+  width: 20%;
+  height: 20%;
+  border-radius: 50%;
+  animation: spinner-scale 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+  transform-origin: 40% 40%;
+}
+
+.spinner-inner div:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.spinner-inner div:nth-child(2) {
+  animation-delay: -0.4s;
+}
+
+.spinner-inner div:nth-child(3) {
+  animation-delay: -0.8s;
+}
+
+.spinner-inner div:nth-child(4) {
+  animation-delay: -0.4s;
+}
+
+/* Size variants */
+.spinner-small {
+  width: 24px;
+  height: 24px;
+}
+
+.spinner-medium {
+  width: 40px;
+  height: 40px;
+}
+
+.spinner-large {
+  width: 64px;
+  height: 64px;
+}
+
+/* Color variants */
+.spinner-primary div {
+  background: #3b82f6;
+}
+
+.spinner-secondary div {
+  background: #6c757d;
+}
+
+.spinner-light div {
+  background: #ffffff;
+}
+
+.spinner-dark div {
+  background: #212529;
+}
+
+@keyframes spinner-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spinner-scale {
+  0%, 100% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1);
+  }
+}

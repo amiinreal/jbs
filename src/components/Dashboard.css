@@ -1,0 +1,70 @@
+/* Add these styles to your existing Dashboard.css file */
+
+.company-section,
+.verification-section,
+.verified-company-section {
+  background-color: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.company-section h3,
+.verification-section h3,
+.verified-company-section h3 {
+  margin-top: 0;
+  color: #2d3748;
+}
+
+.company-section p,
+.verification-section p,
+.verified-company-section p {
+  margin-bottom: 1.5rem;
+  color: #4a5568;
+}
+
+.company-register-btn,
+.status-btn,
+.post-job-btn {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.company-register-btn {
+  background-color: #4b6cb7;
+  color: white;
+}
+
+.status-btn {
+  background-color: #ecc94b;
+  color: #744210;
+}
+
+.post-job-btn {
+  background-color: #48bb78;
+  color: white;
+}
+
+.company-register-btn:hover,
+.status-btn:hover,
+.post-job-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.company-section {
+  border-left: 4px solid #4b6cb7;
+}
+
+.verification-section {
+  border-left: 4px solid #ecc94b;
+}
+
+.verified-company-section {
+  border-left: 4px solid #48bb78;
+}

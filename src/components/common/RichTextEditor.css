@@ -1,0 +1,68 @@
+.rich-text-editor-container {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.ql-container {
+  border-bottom-left-radius: 0.25rem;
+  border-bottom-right-radius: 0.25rem;
+  background: #fff;
+  min-height: 150px;
+}
+
+.ql-toolbar {
+  border-top-left-radius: 0.25rem;
+  border-top-right-radius: 0.25rem;
+  border-color: #e2e8f0;
+  background: #f8f9fa;
+}
+
+.ql-editor {
+  min-height: 200px;
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+.ql-editor.ql-blank::before {
+  color: #a0aec0;
+}
+
+.editor-hint {
+  font-size: 0.875rem;
+  color: #718096;
+  margin-top: 0.25rem;
+}
+
+/* Fix for the DOMNodeInserted warning */
+.ql-clipboard {
+  left: -100000px;
+  height: 1px;
+  overflow-y: hidden;
+  position: absolute;
+  top: 50%;
+}
+
+.rich-text-content {
+  line-height: 1.6;
+}
+
+.rich-text-content h1,
+.rich-text-content h2,
+.rich-text-content h3 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.rich-text-content ul,
+.rich-text-content ol {
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.rich-text-content li {
+  margin-bottom: 0.5rem;
+}
+
+.rich-text-content p {
+  margin-bottom: 1rem;
+}
