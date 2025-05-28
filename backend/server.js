@@ -11,8 +11,8 @@ import { createDirectories, createStorageFolders } from './setup.mjs';
 import { executeQuery } from './utils/dbManager.js';
 import { corsMiddleware } from './middleware/corsMiddleware.js';
 
-// Get PostgreSQL connection pool
-import pool from './db';
+// Get PostgreSQL connection pool - Update this import to use the correct path
+import pool from './database.js';
 import pgSession from 'connect-pg-simple';
 
 // Load environment variables
@@ -111,15 +111,14 @@ createStorageFolders();
 app.use(express.static('public'));
 app.use('/uploads', express.static('uploads'));
 
-// Import route modules
-const authRoutes = require('./routes/auth');
-const userRoutes = require('./routes/users');
-const houseRoutes = require('./routes/houses');
-const jobRoutes = require('./routes/jobs');
-const jobListingsRoutes = require('./routes/job-listings');
-const healthRoutes = require('./routes/health');
-const uploadRoutes = require('./routes/uploads');
-const debugRoutes = require('./routes/debug');
+// Import route modules using ES module syntax
+import authRoutes from './routes/auth.js';
+import userRoutes from './routes/users.js';
+import houseRoutes from './routes/houses.js';
+import jobRoutes from './routes/jobs.js';
+import healthRoutes from './routes/health.js';
+import uploadRoutes from './routes/uploads.js';
+import debugRoutes from './routes/debug.js';
 
 // Apply CORS middleware before routes
 app.use(corsMiddleware);
@@ -185,8 +184,8 @@ app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/houses', houseRoutes);
-app.use('/api/jobs', jobRoutes); // Apply job routes directly at /api/jobs
-app.use('/api/job-listings', jobRoutes); // Add the new route
+app.use('/api/jobs', jobRoutes); 
+app.use('/api/job-listings', jobRoutes); // Alias for /api/jobs
 app.use('/api/upload', uploadRoutes);
 
 // Debug route to verify API is accessible
@@ -237,15 +236,6 @@ app.use('/api/jobs', (req, res, next) => {
   
   next();
 });
-
-// Apply routes
-app.use('/api/health', healthRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/houses', houseRoutes);
-app.use('/api/jobs', jobRoutes); // Apply job routes directly at /api/jobs
-app.use('/api/job-listings', jobRoutes); // Add the new route
-app.use('/api/upload', uploadRoutes);
 
 // Add debug route to verify API is accessible and configured correctly
 app.get('/api/debug/routes', (req, res) => {

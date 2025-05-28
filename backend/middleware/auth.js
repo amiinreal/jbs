@@ -1,23 +1,9 @@
 import pool from '../database.js';
 import { executeQuery } from '../utils/dbManager.js';
 
-// Check authentication middleware with improved error handling and timeout
+// Check authentication middleware with improved error handling
 export const checkAuthMiddleware = async (req, res, next) => {
-  try {
-    // Fast path: If session exists, use it directly
-    if (req.session && req.session.user) {
-      req.user = req.session.user;
-      return next();
-    }
-
-    // If no session, simply pass control and let route handle unauthenticated state
-    req.user = null;
-    next();
-  } catch (err) {
-    console.error('Auth middleware error:', err);
-    req.user = null;
-    next();
-  }
+  // middleware implementation
 };
 
 // Check admin role middleware

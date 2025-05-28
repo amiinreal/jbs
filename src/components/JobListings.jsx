@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { getImageUrl, getPlaceholderImage } from '../../utils/fileUtils';
+import { getImageUrl, getPlaceholderImage } from '../utils/fileUtils';
 import './ListingStyles.css'; // Assuming this CSS file exists or will be created
 
 const roleOptions = ['Designer', 'Developer', 'Manager', 'Engineer', 'Specialist', 'Other'];
@@ -441,13 +441,9 @@ const JobListings = () => {
         </div>
       ) : (
         <div className="job-listings-grid">
-          {jobs.map(job => {
+          {filteredJobs.map(job => { // Changed from jobs.map to filteredJobs.map
             const company = companies[job.user_id] || {};
-            // Assuming getImageUrl might take company.logo_url or similar from company object
-            // and falls back to placeholder. The user's old getCompanyLogo took the job object.
-            // This part might need reconciliation later. For now, use structure from user's new code.
             const logoUrl = company.logo_url ? getImageUrl({ url: company.logo_url }) : getPlaceholderImage('user');
-
 
             return (
               <Link to={`/jobs/${job.id}`} key={job.id} className="job-card">

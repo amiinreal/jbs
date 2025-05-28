@@ -3,6 +3,9 @@ const router = express.Router();
 import { checkAuthMiddleware as authMiddleware } from '../middleware/auth.js';
 import * as jobsController from '../controllers/jobsController.js';
 
+// Import job applications router
+import jobApplicationsRouter from './job-applications.js';
+
 // Enable CORS specifically for job routes
 router.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', 'http://localhost:5173'); // Allow Vite dev server
@@ -35,5 +38,8 @@ router.post('/', authMiddleware, jobsController.createJob);
 
 // Get job by ID
 router.get('/:id', jobsController.getJobById);
+
+// Apply job applications routes at /api/jobs/:jobId/applications
+router.use('/:jobId/applications', jobApplicationsRouter);
 
 export default router;

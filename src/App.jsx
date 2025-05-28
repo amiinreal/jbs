@@ -6,6 +6,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import Notifications from './components/Notifications';
 import Messages from './components/Messages';
 import JobListings from './components/JobListings';
+import JobDetail from './components/JobDetail'; // Add this import
 import HouseListings from './components/HouseListings';
 import CarListings from './components/CarListings';
 import ItemListings from './components/ItemListings';
@@ -391,6 +392,7 @@ function App() {
           
           {/* Public routes */}
           <Route path="/jobs" element={<JobListings isAuthenticated={isAuthenticated} />} />
+          <Route path="/jobs/:jobId" element={<JobDetail user={user} isAuthenticated={isAuthenticated} />} /> {/* Add this route */}
           <Route path="/houses" element={<HouseListings isAuthenticated={isAuthenticated} />} />
           <Route path="/cars" element={<CarListings isAuthenticated={isAuthenticated} />} />
           <Route path="/items" element={<ItemListings isAuthenticated={isAuthenticated} />} />
