@@ -2,26 +2,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import '../styles/navigation.css';
 import LoadingSpinner from './common/LoadingSpinner';
-import { getAuthUserFromStorage } from '../utils/authUtils';
+import { useAuth } from '../contexts/AuthContext'; // Import useAuth
 
-const Navigation = ({ user, isAuthenticated, setIsAuthenticated, handleLogout, authLoading }) => {
+// Removed props: user, isAuthenticated, setIsAuthenticated, handleLogout, authLoading
+const Navigation = () => { 
+  const { currentUser, isAuthenticated, logout, isCompany, isAdmin, loading: authLoading } = useAuth();
+  
   const [menuOpen, setMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [localAuthLoading, setLocalAuthLoading] = useState(authLoading);
   const userMenuRef = useRef(null);
-  const authTimeoutRef = useRef(null);
-  const [cachedUser, setCachedUser] = useState(null);
-  
-  // Load initial user from localStorage to avoid UI flicker
-  useEffect(() => {
-    const storedUser = getAuthUserFromStorage();
-    if (storedUser) {
-      setCachedUser(storedUser);
-    }
-  }, []);
   
   // Handle scroll effect for navbar
   useEffect(() => {
@@ -47,61 +38,28 @@ const Navigation = ({ user, isAuthenticated, setIsAuthenticated, handleLogout, a
     };
   }, [userMenuRef]);
 
-  // Handle loading timeouts
-  useEffect(() => {
-    // Set a short independent timeout for UI display purposes
-    const uiTimeoutId = setTimeout(() => {
-      setIsLoaded(true);
-      setLocalAuthLoading(false);
-    }, 2000);
-    
-    if (authLoading) {
-      // If authLoading is still true after 2 seconds, something might be stuck
-      if (authTimeoutRef.current) {
-        clearTimeout(authTimeoutRef.current);
-      }
-      
-      authTimeoutRef.current = setTimeout(() => {
-        console.warn('Navigation auth display timeout reached');
-        setIsLoaded(true);
-        setLocalAuthLoading(false);
-      }, 2000);
-    } else {
-      setIsLoaded(true);
-      setLocalAuthLoading(false);
-      clearTimeout(uiTimeoutId);
-    }
-    
-    return () => {
-      clearTimeout(uiTimeoutId);
-      if (authTimeoutRef.current) {
-        clearTimeout(authTimeoutRef.current);
-      }
-    };
-  }, [authLoading]);
-  
-  // Update local loading state when prop changes
-  useEffect(() => {
-    setLocalAuthLoading(authLoading);
-  }, [authLoading]);
-
   const toggleMenu = () => {
     setMenuOpen(!menuOpen);
   };
 
   const closeMenu = () => {
     setMenuOpen(false);
+    setUserMenuOpen(false); // Also close user menu if open
   };
 
-  // Use either the authenticated user or cached user from localStorage
-  const displayUser = user || cachedUser;
-  const showAuthenticatedUI = isAuthenticated || !!cachedUser;
+  const handleLogoutClick = () => {
+    setUserMenuOpen(false);
+    logout(); // Call logout from AuthContext
+  };
+
+  // Use currentUser from AuthContext directly
+  const displayUser = currentUser; 
 
   return (
     <nav className={`main-navigation ${scrolled ? 'scrolled' : ''}`}>
       <div className="nav-container">
         <div className="nav-left">
-          <Link to="/" className="site-logo">JBS</Link>
+          <Link to="/" className="site-logo" onClick={closeMenu}>JBS</Link>
           <button 
             className={`menu-toggle ${menuOpen ? 'active' : ''}`}
             onClick={toggleMenu}
@@ -123,12 +81,12 @@ const Navigation = ({ user, isAuthenticated, setIsAuthenticated, handleLogout, a
         </div>
         
         <div className="nav-right">
-          {(localAuthLoading && !isLoaded) ? (
+          {authLoading ? ( // Use loading state from AuthContext
             <div className="auth-loading">
               <LoadingSpinner size="small" color="primary" />
               <span className="loading-text">Loading...</span>
             </div>
-          ) : showAuthenticatedUI ? (
+          ) : isAuthenticated ? ( // Use isAuthenticated from AuthContext
             <>
               <Link to="/new-ad" className="post-ad-button" onClick={closeMenu}>Post Ad</Link>
               <div className="user-menu-container" ref={userMenuRef}>
@@ -149,23 +107,20 @@ const Navigation = ({ user, isAuthenticated, setIsAuthenticated, handleLogout, a
                 
                 {userMenuOpen && (
                   <div className="user-dropdown">
-                    <Link to="/dashboard" onClick={() => setUserMenuOpen(false)}>Dashboard</Link>
-                    <Link to="/messages" onClick={() => setUserMenuOpen(false)}>Messages</Link>
-                    <Link to="/my-listings" onClick={() => setUserMenuOpen(false)}>My Listings</Link>
-                    {displayUser?.is_company && ( // Changed from isCompany to is_company to match user object
+                    <Link to="/dashboard" onClick={closeMenu}>Dashboard</Link>
+                    <Link to="/messages" onClick={closeMenu}>Messages</Link>
+                    <Link to="/my-listings" onClick={closeMenu}>My Listings</Link>
+                    {isCompany && ( // Use isCompany from AuthContext
                       <>
-                        <Link to="/company-profile" onClick={() => setUserMenuOpen(false)}>Company Profile</Link>
-                        <Link to="/manage-jobs" onClick={() => setUserMenuOpen(false)}>Manage Jobs</Link> 
+                        <Link to="/company-profile" onClick={closeMenu}>Company Profile</Link>
+                        <Link to="/manage-jobs" onClick={closeMenu}>Manage Jobs</Link> 
                       </>
                     )}
-                    {displayUser?.role === 'admin' && (
-                      <Link to="/admin" onClick={() => setUserMenuOpen(false)}>Admin</Link>
+                    {isAdmin && ( // Use isAdmin from AuthContext
+                      <Link to="/admin" onClick={closeMenu}>Admin</Link>
                     )}
                     <button 
-                      onClick={() => {
-                        setUserMenuOpen(false);
-                        handleLogout();
-                      }}
+                      onClick={handleLogoutClick} // Use the new handler
                       className="logout-button"
                     >
                       Logout

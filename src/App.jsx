@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react'; // Keep useEffect for non-auth tasks if any
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'; // Ensure Router is imported if not already
 import './App.css';
 import './styles/globalStyles.css';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -30,251 +30,116 @@ import VerificationRequests from './components/admin/VerificationRequests';
 import ListingManagement from './components/admin/ListingManagement';
 import OnlineUsers from './components/admin/OnlineUsers';
 import CompanyProfile from './components/CompanyProfile';
+import { AuthProvider, useAuth } from './contexts/AuthContext'; // Import AuthProvider and useAuth
 
-// Import auth and loading helpers
-import { checkAuthStatus, getAuthUserFromStorage } from './utils/authUtils';
-import { createAuthLoadingController } from './utils/loadingUtils';
+// Helper function for ProtectedRoute, now defined inside App or imported
+// If it uses useAuth, it cannot be defined at the top level of App.jsx before App component itself.
+// So, we'll define it inside App or make it a separate component that uses useAuth.
+
 
 function App() {
-  const navigate = useNavigate();
+  // Remove old auth state and logic
+  // const navigate = useNavigate(); // useNavigate can be used by components directly via useAuth if needed for logout
   const [jobs, setJobs] = useState([]);
   const [houses, setHouses] = useState([]);
   const [cars, setCars] = useState([]);
   const [items, setItems] = useState([]);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userRole, setUserRole] = useState('user');
-  const [isCompany, setIsCompany] = useState(false);
-  const [isVerifiedCompany, setIsVerifiedCompany] = useState(false);
-  const [user, setUser] = useState(null);
-  const [userId, setUserId] = useState(null);
-  const [username, setUsername] = useState('');
-  const [userEmail, setUserEmail] = useState('');
-  const [authLoading, setAuthLoading] = useState(true);
-  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  // All these states are now managed by AuthContext:
+  // const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // const [userRole, setUserRole] = useState('user');
+  // const [isCompany, setIsCompany] = useState(false);
+  // const [isVerifiedCompany, setIsVerifiedCompany] = useState(false);
+  // const [user, setUser] = useState(null);
+  // const [userId, setUserId] = useState(null);
+  // const [username, setUsername] = useState('');
+  // const [userEmail, setUserEmail] = useState('');
+  // const [authLoading, setAuthLoading] = useState(true);
+  // const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
-  // Create auth loading controller
-  const authLoadingController = createAuthLoadingController(
-    setAuthLoading,
-    setIsAuthenticated,
-    setUser
-  );
+  // Remove old auth useEffects
+  // useEffect for initialLoadComplete can be removed or adapted if still needed for other purposes
+  // useEffect for checkAuth is removed
+  
+  // The useEffect for fetching listings should now depend on the loading state from AuthContext
+  // or be triggered in a way that doesn't rely on App.jsx's local authLoading.
+  // For simplicity, we'll assume components fetch their own data or this is handled elsewhere.
+  // If listings are global and depend on auth status, this needs careful placement.
+  // For now, removing the listing fetch from App.jsx to simplify.
+  // Components can fetch data they need, using useAuth if auth is a prerequisite.
 
-  // Quick initial load from localStorage to prevent flashing
-  useEffect(() => {
-    const storedUser = getAuthUserFromStorage();
-    if (storedUser) {
-      setIsAuthenticated(true);
-      setUser(storedUser);
-      setUserRole(storedUser.role || 'user');
-      setIsCompany(storedUser.isCompany || false);
-      setIsVerifiedCompany(storedUser.isVerifiedCompany || false);
-      setUserId(storedUser.id);
-      setUsername(storedUser.username || '');
-      setUserEmail(storedUser.email || '');
-    }
-    setInitialLoadComplete(true);
-  }, []);
+  // ProtectedRoute component - now uses useAuth
+  const ProtectedRoute = ({ children, requiredRole = null, requiredCompany = false, requiredVerifiedCompany = false }) => {
+    const { isAuthenticated, currentUser, loading, isCompany, isVerifiedCompany, isAdmin } = useAuth();
+    // const location = useLocation(); // To preserve redirect state
 
-  // UseEffect for authentication check
-  useEffect(() => {
-    // Skip if initial load is not complete
-    if (!initialLoadComplete) return;
-    
-    // Check authentication status
-    const checkAuth = async () => {
-      try {
-        // Start authentication loading with proper timeout handling
-        authLoadingController.startAuthLoading(8000);
-        console.log("Checking authentication against server...");
-        
-        const authResult = await checkAuthStatus();
-        
-        if (authResult.success && authResult.isAuthenticated && authResult.user) {
-          const userData = authResult.user;
-          
-          // Update all auth state
-          setUserRole(userData.role || 'user');
-          setIsCompany(userData.isCompany || false);
-          setIsVerifiedCompany(userData.isVerifiedCompany || false);
-          setUserId(userData.id);
-          setUsername(userData.username || '');
-          setUserEmail(userData.email || '');
-          
-          // Stop loading and set authenticated state with user data
-          authLoadingController.stopAuthLoading(true, userData);
-        } else {
-          console.log('Not authenticated:', authResult);
-          authLoadingController.stopAuthLoading(false, null);
-        }
-      } catch (error) {
-        console.error('Error in auth check:', error);
-        authLoadingController.stopAuthLoading(false, null);
-      }
-    };
-
-    checkAuth();
-  }, [initialLoadComplete]);
-
-  // Add a separate effect to fetch listings after authentication is confirmed
-  useEffect(() => {
-    // Only fetch listings if authentication check is complete
-    if (!authLoading) {
-      const fetchListings = async () => {
-        try {
-          console.log("Fetching listings...");
-          
-          // Helper function to fetch data with error handling
-          const fetchData = async (url) => {
-            try {
-              console.log(`Fetching from: ${url}`);
-              const response = await fetch(url, {
-                credentials: 'include'
-              });
-              
-              if (!response.ok) {
-                console.warn(`Failed to fetch ${url}, status: ${response.status}`);
-                return { data: [] };
-              }
-              
-              return await response.json();
-            } catch (error) {
-              console.error(`Error fetching ${url}:`, error);
-              return { data: [] };
-            }
-          };
-
-          // Fetch all data in parallel - use the public endpoints
-          const [jobsData, housesData, carsData, itemsData] = await Promise.all([
-            fetchData('/api/jobs'),
-            fetchData('/api/houses/public'),
-            fetchData('/api/cars/public'),
-            fetchData('/api/items/public')
-          ]);
-
-          setJobs(jobsData.data || []);
-          setHouses(housesData.data || []);
-          setCars(carsData.data || []);
-          setItems(itemsData.data || []);
-          
-          console.log("Listings fetched successfully");
-        } catch (error) {
-          console.error('Error fetching listings:', error);
-        }
-      };
-      
-      fetchListings();
-    }
-  }, [authLoading]);
-
-  // Function to handle logout with improved error handling
-  const handleLogout = async () => {
-    try {
-      setAuthLoading(true);
-      
-      // Clear local auth state
-      localStorage.removeItem('auth_user');
-      
-      try {
-        const response = await fetch('/api/auth/logout', {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-        });
-
-        if (!response.ok) {
-          console.warn('Logout response not OK:', response.status);
-        }
-      } catch (error) {
-        console.error('Fetch error during logout:', error);
-      }
-      
-      // Always clear auth state regardless of server response
-      setIsAuthenticated(false);
-      setUser(null);
-      setUserRole('user');
-      setIsCompany(false);
-      setIsVerifiedCompany(false);
-      setUsername('');
-      setUserEmail('');
-      setUserId(null);
-      
-      // Redirect to home page
-      navigate('/');
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  // Protected route component
-  const ProtectedRoute = ({ children, requiredRole = null }) => {
-    if (authLoading) {
+    if (loading) {
       return <LoadingOverlay isLoading={true} text="Checking authentication..." />;
     }
     
     if (!isAuthenticated) {
-      // Save current path for redirect after login
-      const currentPath = window.location.pathname;
+      const currentPath = window.location.pathname + window.location.search;
       sessionStorage.setItem('redirectAfterLogin', currentPath);
-      
-      // Redirect to login with state to enable return after login
       return <Navigate to="/login" state={{ from: currentPath }} replace />;
     }
     
-    // Check for role requirement if specified
-    if (requiredRole && userRole !== requiredRole) {
-      return <Navigate to="/dashboard" replace />;
+    if (requiredRole && currentUser?.role !== requiredRole) {
+      return <Navigate to="/dashboard" replace />; // Or an unauthorized page
+    }
+
+    if (requiredCompany && !isCompany) {
+      return <Navigate to="/dashboard" replace />; // Or company registration page
+    }
+    
+    if (requiredVerifiedCompany && !isVerifiedCompany) {
+       return <Navigate to="/dashboard" replace />; // Or verification status page
     }
     
     return children;
   };
+  
+  // Main App Wrapper - This component will be rendered by AuthProvider
+  const AppContent = () => {
+    const { isAuthenticated, currentUser, loading, isCompany, isVerifiedCompany, isAdmin } = useAuth();
+    // This component can now access auth context if needed, e.g. for passing to Navigation or Routes
+    // Or Navigation and Routes can use useAuth() themselves.
 
-  // If initial load is not complete, show minimal loading screen
-  if (!initialLoadComplete) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="p-8 bg-white shadow-md rounded-lg text-center">
-          <h1 className="text-2xl font-bold mb-4">Loading application...</h1>
+    if (loading) {
+      // This is the initial loading screen from AuthContext
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-100">
+          <div className="p-8 bg-white shadow-md rounded-lg text-center">
+            <h1 className="text-2xl font-bold mb-4">Loading application...</h1>
+          </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  return (
-    <ErrorBoundary>
-      <LoadingOverlay 
-        isLoading={authLoading} 
-        text="Authenticating..." 
-        transparent={true}
-      >
-        <Navigation 
-          user={user} 
-          isAuthenticated={isAuthenticated} 
-          setIsAuthenticated={setIsAuthenticated} 
-          handleLogout={handleLogout}
-          authLoading={authLoading}
-        />
+    return (
+      <ErrorBoundary>
+        {/* Navigation will now use useAuth directly */}
+        <Navigation /> 
         
         <Routes>
+          {/* Pass isAuthenticated from useAuth to public routes that have different UI based on it */}
           <Route path="/" element={<LandingPage isAuthenticated={isAuthenticated} />} />
           
           <Route 
             path="/login" 
-            element={isAuthenticated ? <Navigate to="/dashboard" /> : <LoginRegister setIsAuthenticated={setIsAuthenticated} />} 
+            // LoginRegister will use useAuth to call login function
+            element={isAuthenticated ? <Navigate to="/dashboard" /> : <LoginRegister />} 
           />
           
           <Route 
             path="/register" 
-            element={isAuthenticated ? <Navigate to="/dashboard" /> : <LoginRegister setIsAuthenticated={setIsAuthenticated} initialTab="register" />} 
+            element={isAuthenticated ? <Navigate to="/dashboard" /> : <LoginRegister initialTab="register" />} 
           />
           
-          {/* Protected routes using the ProtectedRoute component */}
           <Route 
             path="/dashboard" 
             element={
               <ProtectedRoute>
-                <Dashboard userRole={userRole} isCompany={isCompany} isVerifiedCompany={isVerifiedCompany} />
+                {/* Dashboard can use useAuth to get userRole, isCompany, etc. */}
+                <Dashboard /> 
               </ProtectedRoute>
             } 
           />
@@ -283,49 +148,38 @@ function App() {
             path="/messages" 
             element={
               <ProtectedRoute>
-                <Messages currentUser={user} />
+                {/* Messages can use useAuth to get currentUser */}
+                <Messages /> 
               </ProtectedRoute>
             } 
           />
           
-          <Route 
-            path="/notifications" 
-            element={
-              <ProtectedRoute>
-                <Notifications />
-              </ProtectedRoute>
-            } 
-          />
+          <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
           
           <Route 
             path="/new-ad" 
             element={
-              <ProtectedRoute>
-                <CreateAd 
-                  isCompany={isCompany} 
-                  isVerifiedCompany={isVerifiedCompany} 
-                  user={user} 
-                />
+              <ProtectedRoute requiredCompany={true} requiredVerifiedCompany={true}>
+                {/* CreateAd can use useAuth */}
+                <CreateAd />
               </ProtectedRoute>
             } 
           />
 
-          {/* Route for creating a new job posting */}
           <Route 
             path="/post-job" 
             element={
-              <ProtectedRoute>
-                {isCompany && isVerifiedCompany ? <JobListingForm /> : <Navigate to="/dashboard" />}
+              <ProtectedRoute requiredCompany={true} requiredVerifiedCompany={true}>
+                <JobListingForm />
               </ProtectedRoute>
             } 
           />
 
-          {/* Route for editing an existing job posting */}
           <Route 
             path="/post-job/:jobId" 
             element={
-              <ProtectedRoute>
-                {isCompany && isVerifiedCompany ? <JobListingForm /> : <Navigate to="/dashboard" />}
+              <ProtectedRoute requiredCompany={true} requiredVerifiedCompany={true}>
+                <JobListingForm />
               </ProtectedRoute>
             } 
           />
@@ -334,27 +188,26 @@ function App() {
             path="/my-listings" 
             element={
               <ProtectedRoute>
-                <UserListings userId={user?.id} />
+                {/* UserListings can use useAuth to get currentUser.id */}
+                <UserListings /> 
               </ProtectedRoute>
             } 
           />
 
-          {/* Route for managing company's job postings */}
           <Route 
             path="/manage-jobs" 
             element={
-              <ProtectedRoute>
-                {isCompany ? <ManageJobPostings /> : <Navigate to="/dashboard" />}
+              <ProtectedRoute requiredCompany={true}>
+                <ManageJobPostings />
               </ProtectedRoute>
             } 
           />
           
-          {/* Company routes */}
           <Route 
             path="/company-profile" 
             element={
-              <ProtectedRoute>
-                {isCompany ? <CompanyProfile user={user} /> : <Navigate to="/company-registration" />}
+              <ProtectedRoute requiredCompany={true}>
+                <CompanyProfile />
               </ProtectedRoute>
             } 
           />
@@ -362,8 +215,9 @@ function App() {
           <Route 
             path="/company-registration" 
             element={
-              <ProtectedRoute>
-                {isCompany ? <Navigate to="/company-profile" /> : <CompanyRegistration user={user} />}
+              <ProtectedRoute> 
+                {/* Logic within CompanyRegistration or here to redirect if already company */}
+                {isCompany ? <Navigate to="/company-profile" /> : <CompanyRegistration />}
               </ProtectedRoute>
             } 
           />
@@ -371,67 +225,26 @@ function App() {
           <Route 
             path="/verification-status" 
             element={
-              <ProtectedRoute>
-                {isCompany ? <VerificationStatus user={user} /> : <Navigate to="/company-registration" />}
+              <ProtectedRoute requiredCompany={true}>
+                <VerificationStatus />
               </ProtectedRoute>
             } 
           />
           
-          {/* Admin routes */}
-          <Route 
-            path="/admin" 
-            element={
-              <ProtectedRoute requiredRole="admin">
-                <AdminDashboard />
-              </ProtectedRoute>
-            } 
-          />
+          <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/admin/users" element={<ProtectedRoute requiredRole="admin"><UserManagement /></ProtectedRoute>} />
+          <Route path="/admin/online-users" element={<ProtectedRoute requiredRole="admin"><OnlineUsers /></ProtectedRoute>} />
+          <Route path="/admin/verifications" element={<ProtectedRoute requiredRole="admin"><VerificationRequests /></ProtectedRoute>} />
+          <Route path="/admin/listings" element={<ProtectedRoute requiredRole="admin"><ListingManagement /></ProtectedRoute>} />
           
-          <Route 
-            path="/admin/users" 
-            element={
-              <ProtectedRoute requiredRole="admin">
-                <UserManagement />
-              </ProtectedRoute>
-            } 
-          />
-          
-          <Route 
-            path="/admin/online-users" 
-            element={
-              <ProtectedRoute requiredRole="admin">
-                <OnlineUsers />
-              </ProtectedRoute>
-            } 
-          />
-          
-          <Route 
-            path="/admin/verifications" 
-            element={
-              <ProtectedRoute requiredRole="admin">
-                <VerificationRequests />
-              </ProtectedRoute>
-            } 
-          />
-          
-          <Route 
-            path="/admin/listings" 
-            element={
-              <ProtectedRoute requiredRole="admin">
-                <ListingManagement />
-              </ProtectedRoute>
-            } 
-          />
-          
-          {/* Public routes */}
+          {/* Public routes: pass isAuthenticated for UI changes if needed */}
           <Route path="/jobs" element={<JobListings isAuthenticated={isAuthenticated} />} />
-          <Route path="/jobs/:jobId" element={<JobDetail user={user} isAuthenticated={isAuthenticated} />} /> 
-          {/* Route for viewing applicants for a specific job */}
+          <Route path="/jobs/:jobId" element={<JobDetail isAuthenticated={isAuthenticated} />} /> 
           <Route 
             path="/jobs/:jobId/applicants" 
             element={
-              <ProtectedRoute>
-                {isCompany ? <ViewJobApplicants /> : <Navigate to="/dashboard" />}
+              <ProtectedRoute requiredCompany={true}>
+                <ViewJobApplicants />
               </ProtectedRoute>
             } 
           />
@@ -447,8 +260,18 @@ function App() {
             </div>
           </div>
         </footer>
-      </LoadingOverlay>
-    </ErrorBoundary>
+      </ErrorBoundary>
+    );
+  }
+
+  return (
+    // Router should be the outermost component if App is the root for routing
+    // Or, if main.jsx has Router, then App doesn't need it. Assuming App is root for routing here.
+    <Router> 
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </Router>
   );
 }
 

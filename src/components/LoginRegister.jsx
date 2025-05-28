@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import './LoginRegister.css';
-import { login, register } from '../utils/authUtils';
+// login and register from authUtils are removed as we'll use AuthContext or direct fetch
+// import { login as apiLogin, register as apiRegister } from '../utils/authUtils'; // Renamed to avoid conflict
+import { useAuth } from '../contexts/AuthContext'; // Import useAuth
 import { checkDatabaseConnection } from '../utils/databaseCheck';
 import LoadingSpinner from './common/LoadingSpinner';
 import LoadingOverlay from './common/LoadingOverlay';
 
-const LoginRegister = ({ setIsAuthenticated, initialTab }) => {
+const LoginRegister = ({ initialTab }) => { // Removed setIsAuthenticated prop
   const navigate = useNavigate();
   const location = useLocation();
+  const { login: authContextLogin, isAuthenticated } = useAuth(); // Get login from AuthContext
+
   const [isLogin, setIsLogin] = useState(initialTab !== 'register');
   const [formData, setFormData] = useState({
     username: '',
@@ -42,6 +46,15 @@ const LoginRegister = ({ setIsAuthenticated, initialTab }) => {
       setRedirectTo(location.state.from);
     }
   }, [location]);
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      const path = redirectTo || '/dashboard';
+      console.log(`Already authenticated, redirecting to ${path}`);
+      navigate(path, { replace: true });
+    }
+  }, [isAuthenticated, navigate, redirectTo]);
 
   // Check database connection on component mount
   useEffect(() => {
@@ -106,91 +119,75 @@ const LoginRegister = ({ setIsAuthenticated, initialTab }) => {
       console.log("Attempting authentication...");
       
       if (isLogin) {
-        try {
-          const loginData = await login({
-            username: formData.username.trim(),
-            password: formData.password
-          });
-          
-          console.log("Login successful:", loginData);
-          
-          // Check if login was successful
-          if (loginData.success) {
-            // Update authentication state
-            setIsAuthenticated(true);
-            
-            // Clear any stored redirect path
-            const redirectPath = redirectTo;
-            sessionStorage.removeItem('redirectAfterLogin');
-            
-            // Redirect to dashboard or stored path
-            navigate(redirectPath);
-          } else {
-            throw new Error(loginData.error || 'Login failed');
-          }
-        } catch (loginError) {
-          console.error('Login error:', loginError);
-          
-          // Provide more user-friendly error message
-          if (loginError.message.includes('403') || loginError.message.includes('401')) {
-            setError('Invalid username or password. Please try again.');
-          } else if (loginError.message.includes('500')) {
-            setError('Server error. Please try again later.');
-          } else if (loginError.message.includes('Invalid response format')) {
-            setError('Authentication service is temporarily unavailable. Please try again later.');
-          } else {
-            setError(loginError.message || 'An unexpected error occurred. Please try again.');
-          }
+        // Using direct fetch for login
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: formData.username.trim(), password: formData.password }),
+        });
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          console.log("Login successful via API:", data);
+          authContextLogin(data); // Pass the whole data object { success, user, token, message }
+          // Redirection is now handled by the useEffect watching isAuthenticated
+          const redirectPath = redirectTo || '/dashboard';
+          sessionStorage.removeItem('redirectAfterLogin'); // Clean up
+          navigate(redirectPath, { replace: true }); // Explicit navigation after context update
+        } else {
+          throw new Error(data.error || 'Login failed');
         }
       } else {
-        try {
-          const registerData = await register({
+        // Using direct fetch for registration
+        const registerResponse = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             username: formData.username.trim(),
             email: formData.email.trim(),
-            password: formData.password
+            password: formData.password,
+          }),
+        });
+        const registerData = await registerResponse.json();
+
+        if (registerResponse.ok && registerData.success) {
+          // Automatically log in after successful registration
+          const loginResponse = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: formData.username.trim(), password: formData.password }),
           });
-          
-          if (registerData.success) {
-            // For registration, log user in automatically
-            const loginData = await login({
-              username: formData.username.trim(),
-              password: formData.password
-            });
-            
-            // Update authentication state
-            setIsAuthenticated(true);
-            
-            // Clear any stored redirect path
-            const redirectPath = redirectTo;
+          const loginData = await loginResponse.json();
+
+          if (loginResponse.ok && loginData.success) {
+            authContextLogin(loginData);
+            const redirectPath = redirectTo || '/dashboard';
             sessionStorage.removeItem('redirectAfterLogin');
-            
-            // Show success message before redirecting
-            setError(null);
-            
-            // Redirect to dashboard or stored path
-            setTimeout(() => {
-              navigate(redirectPath);
-            }, 1000);
+            navigate(redirectPath, { replace: true });
           } else {
-            throw new Error(registerData.error || 'Registration failed');
+            // If auto-login fails, redirect to login page with a message
+            setError('Registration successful, but auto-login failed. Please log in manually.');
+            setIsLogin(true); // Switch to login tab
           }
-        } catch (registerError) {
-          console.error('Registration error:', registerError);
-          
-          // Provide more user-friendly error message for registration
-          if (registerError.message.includes('already taken')) {
-            setError(registerError.message);
-          } else if (registerError.message.includes('500')) {
-            setError('Server error during registration. Please try again later.');
-          } else {
-            setError(registerError.message || 'Registration failed. Please try again.');
-          }
+        } else {
+          throw new Error(registerData.error || 'Registration failed');
         }
       }
-      
-    } catch (err) {
-      console.error('Auth error:', err);
-      setError(err.message || 'An unexpected error occurred. Please try again.');
+    } catch (apiError) {
+      console.error('API Auth error:', apiError);
+      // More specific error handling based on typical API responses
+      if (apiError.message.includes('Invalid username or password')) {
+        setError('Invalid username or password. Please try again.');
+      } else if (apiError.message.includes('already taken')) {
+        setError(apiError.message);
+      } else if (apiError.message.includes('500') || apiError.message.includes('Server error')) {
+        setError('Server error. Please try again later.');
+      } else if (apiError.message.toLowerCase().includes('failed to fetch')) {
+         setError('Network error. Please check your connection or try again later.');
+      }
+      else {
+        setError(apiError.message || 'An unexpected error occurred. Please try again.');
+      }
     } finally {
       setLoading(false);
       setFormSubmitted(false);

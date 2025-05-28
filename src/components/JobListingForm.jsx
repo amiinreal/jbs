@@ -6,10 +6,18 @@ import './JobListingForm.css';
 import { AuthContext } from '../contexts/AuthContext';
 
 
-const JobListingForm = ({ onSuccess }) => { // Removed user, isCompany, isVerifiedCompany props, will use AuthContext
-  const { jobId } = useParams(); // Get jobId from URL for edit mode
+const JobListingForm = ({ onSuccess }) => { 
+  const { jobId } = useParams(); 
   const navigate = useNavigate();
-  const { user, isAuthenticated, token, isCompany, isVerifiedCompany } = useContext(AuthContext);
+  // Correctly use currentUser from AuthContext and alias it to user if preferred, or use currentUser directly.
+  // The AuthContext provides: currentUser, isAuthenticated, token, isCompany, isVerifiedCompany
+  const { 
+    currentUser: user, // Aliasing currentUser to user for minimal changes below
+    isAuthenticated, 
+    token, 
+    isCompany,         // This is derived state from currentUser in AuthContext
+    isVerifiedCompany  // This is derived state from currentUser in AuthContext
+  } = useContext(AuthContext);
 
   const [formData, setFormData] = useState({
     title: '',
