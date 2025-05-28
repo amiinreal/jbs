@@ -1,47 +1,41 @@
-# JBS - Jobs & Beyond Services
+# Jobs & Beyond Services (JBS)
 
-## Installation and Setup
-
-1. Clone the repository
-2. Install dependencies:
-   ```
-   npm install
-   ```
-3. Install additional required packages for file handling:
-   ```
-   node install-packages.js
-   ```
-4. Create a `.env` file based on the example:
-   ```
-   NODE_ENV=development
-   PORT=3000
-   SESSION_SECRET=your-secret-key
-   DATABASE_URL=postgresql://username:password@localhost:5432/jbs
-   ```
-5. Start the server:
-   ```
-   npm start
-   ```
+A comprehensive platform for job listings, housing, cars, and items. This application connects users with a variety of services and listings in one centralized location.
 
 ## Features
 
-- Jobs listings
-- Housing listings
-- Car listings
-- Marketplace items
-- Secure file uploads
-- User authentication
-- Messaging system
+- User authentication and account management
+- Company registration and verification
+- Job listings with detailed descriptions
+- Housing listings with image galleries
+- Car and item marketplace
+- Admin dashboard for content management
+- Responsive design for all devices
+
+## Technologies Used
+
+- React for the frontend
+- Express.js for the backend API
+- PostgreSQL for data storage
+- Vite for fast development
+- Authentication with JWT and sessions
+
+## Installation
+
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Set up environment variables (see `.env.example`)
+4. Run the development server: `npm run dev`
+
+## API Documentation
+
+The API provides endpoints for all major features including:
+- User management
 - Company verification
+- Listing management (jobs, houses, cars, items)
+- File uploads and storage
+- Admin operations
 
-## Technologies
+## License
 
-- Node.js
-- Express
-- PostgreSQL
-- React
-- Multer (File Uploads)
-
-## Troubleshooting
-
-If you encounter errors related to missing packages, please run:
+MIT License
