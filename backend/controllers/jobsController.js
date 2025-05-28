@@ -1,4 +1,4 @@
-const pool = require('../db');
+import pool from '../database.js';
 
 // Create job table if it doesn't exist
 const ensureJobTable = async () => {
@@ -33,7 +33,7 @@ const ensureJobTable = async () => {
 };
 
 // Get all job listings
-exports.getAllJobs = async (req, res) => {
+export const getAllJobs = async (req, res) => {
   try {
     await ensureJobTable();
     
@@ -53,7 +53,7 @@ exports.getAllJobs = async (req, res) => {
 };
 
 // Create a new job listing
-exports.createJob = async (req, res) => {
+export const createJob = async (req, res) => {
   console.log('POST /api/jobs received:', req.body);
   
   // Check if user is authenticated
@@ -156,7 +156,7 @@ exports.createJob = async (req, res) => {
 };
 
 // Get a specific job listing
-exports.getJobById = async (req, res) => {
+export const getJobById = async (req, res) => {
   try {
     const { id } = req.params;
     
