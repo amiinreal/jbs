@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { getImageUrl, getPlaceholderImage } from '../../utils/fileUtils';
 import './ListingStyles.css'; // Assuming this CSS file exists or will be created
