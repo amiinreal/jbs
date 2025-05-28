@@ -1,7 +1,7 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const authMiddleware = require('../middleware/auth');
-const jobsController = require('../controllers/jobsController');
+import { checkAuthMiddleware as authMiddleware } from '../middleware/auth.js';
+import * as jobsController from '../controllers/jobsController.js';
 
 // Enable CORS specifically for job routes
 router.use((req, res, next) => {
@@ -36,4 +36,4 @@ router.post('/', authMiddleware, jobsController.createJob);
 // Get job by ID
 router.get('/:id', jobsController.getJobById);
 
-module.exports = router;
+export default router;
