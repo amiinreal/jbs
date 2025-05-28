@@ -19,6 +19,9 @@ import Navigation from './components/Navigation';
 import UserListings from './components/UserListings';
 import VerificationStatus from './components/VerificationStatus';
 import LoadingOverlay from './components/common/LoadingOverlay';
+import JobListingForm from './components/JobListingForm'; // Added for job form
+import ManageJobPostings from './components/ManageJobPostings'; // Added for managing jobs
+import ViewJobApplicants from './components/ViewJobApplicants'; // Added for viewing applicants
 
 // Import admin components
 import AdminDashboard from './components/admin/AdminDashboard';
@@ -306,12 +309,42 @@ function App() {
               </ProtectedRoute>
             } 
           />
+
+          {/* Route for creating a new job posting */}
+          <Route 
+            path="/post-job" 
+            element={
+              <ProtectedRoute>
+                {isCompany && isVerifiedCompany ? <JobListingForm /> : <Navigate to="/dashboard" />}
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Route for editing an existing job posting */}
+          <Route 
+            path="/post-job/:jobId" 
+            element={
+              <ProtectedRoute>
+                {isCompany && isVerifiedCompany ? <JobListingForm /> : <Navigate to="/dashboard" />}
+              </ProtectedRoute>
+            } 
+          />
           
           <Route 
             path="/my-listings" 
             element={
               <ProtectedRoute>
                 <UserListings userId={user?.id} />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Route for managing company's job postings */}
+          <Route 
+            path="/manage-jobs" 
+            element={
+              <ProtectedRoute>
+                {isCompany ? <ManageJobPostings /> : <Navigate to="/dashboard" />}
               </ProtectedRoute>
             } 
           />
@@ -392,7 +425,16 @@ function App() {
           
           {/* Public routes */}
           <Route path="/jobs" element={<JobListings isAuthenticated={isAuthenticated} />} />
-          <Route path="/jobs/:jobId" element={<JobDetail user={user} isAuthenticated={isAuthenticated} />} /> {/* Add this route */}
+          <Route path="/jobs/:jobId" element={<JobDetail user={user} isAuthenticated={isAuthenticated} />} /> 
+          {/* Route for viewing applicants for a specific job */}
+          <Route 
+            path="/jobs/:jobId/applicants" 
+            element={
+              <ProtectedRoute>
+                {isCompany ? <ViewJobApplicants /> : <Navigate to="/dashboard" />}
+              </ProtectedRoute>
+            } 
+          />
           <Route path="/houses" element={<HouseListings isAuthenticated={isAuthenticated} />} />
           <Route path="/cars" element={<CarListings isAuthenticated={isAuthenticated} />} />
           <Route path="/items" element={<ItemListings isAuthenticated={isAuthenticated} />} />

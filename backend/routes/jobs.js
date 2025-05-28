@@ -36,8 +36,17 @@ router.get('/', jobsController.getAllJobs);
 // Create a job
 router.post('/', authMiddleware, jobsController.createJob);
 
+// Get jobs by user ID (for company to manage their own listings)
+router.get('/user/:userId', authMiddleware, jobsController.getJobsByUserId);
+
 // Get job by ID
 router.get('/:id', jobsController.getJobById);
+
+// Update a job listing
+router.put('/:id', authMiddleware, jobsController.updateJob);
+
+// Delete a job listing
+router.delete('/:id', authMiddleware, jobsController.deleteJob);
 
 // Apply job applications routes at /api/jobs/:jobId/applications
 router.use('/:jobId/applications', jobApplicationsRouter);

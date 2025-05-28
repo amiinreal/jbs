@@ -1,0 +1,232 @@
+.view-applicants-container {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.applicants-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.applicants-header h1 {
+  font-size: 1.8rem;
+  color: #333;
+  margin: 0;
+}
+
+.loading, .error-container, .no-applicants-message {
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.1rem;
+  color: #555;
+}
+
+.loading-spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid var(--primary-color, #007bff);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.applicants-list {
+  list-style-type: none;
+  padding: 0;
+}
+
+.applicant-item {
+  background-color: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.applicant-summary {
+  padding: 1rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.applicant-summary:hover {
+  background-color: #f0f0f0;
+}
+
+.applicant-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.applicant-name {
+  font-weight: bold;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.applicant-email {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.applicant-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 0.9rem;
+}
+
+.application-date {
+  color: #777;
+}
+
+.application-status {
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  margin-top: 0.3rem;
+  text-transform: capitalize;
+}
+
+.status-pending { background-color: #ffc107; color: #333; }
+.status-viewed { background-color: #17a2b8; color: white; }
+.status-shortlisted { background-color: #28a745; color: white; }
+.status-rejected { background-color: #dc3545; color: white; }
+
+.details-toggle-button {
+  background: none;
+  border: none;
+  color: var(--primary-color, #007bff);
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.application-details {
+  padding: 1.5rem;
+  border-top: 1px solid #e0e0e0;
+  background-color: #fff;
+}
+
+.application-details h4 {
+  font-size: 1.2rem;
+  color: #444;
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.application-details p {
+  margin-bottom: 0.5rem;
+  line-height: 1.6;
+  color: #555;
+}
+
+.application-details p strong {
+  color: #333;
+}
+
+.cover-letter-text {
+  white-space: pre-wrap; /* Preserves whitespace and newlines */
+  font-family: inherit;
+  padding: 0.5rem;
+  background-color: #fdfdfd;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  display: block; /* Make pre take full width */
+}
+
+.resume-link {
+  color: var(--primary-color, #007bff);
+  text-decoration: none;
+}
+.resume-link:hover {
+  text-decoration: underline;
+}
+
+.custom-responses-section {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px dashed #ccc;
+}
+
+.custom-responses-section h4 {
+  font-size: 1.1rem;
+  color: #333;
+  margin-bottom: 0.8rem;
+}
+
+.custom-responses-list {
+  padding-left: 0;
+}
+
+.custom-responses-list dt {
+  font-weight: bold;
+  color: #444;
+  margin-top: 0.8rem;
+}
+
+.custom-responses-list dd {
+  margin-left: 0;
+  padding-left: 1rem; /* Indent answer slightly */
+  color: #555;
+  white-space: pre-wrap; /* Preserve formatting of answers */
+  margin-bottom: 0.5rem;
+}
+
+/* Buttons from global styles (example) */
+.button-primary {
+  background-color: var(--primary-color, #007bff);
+  color: white;
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.button-primary:hover {
+  background-color: var(--primary-color-dark, #0056b3);
+}
+
+.button-secondary {
+  background-color: #6c757d;
+  color: white;
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.button-secondary:hover {
+  background-color: #545b62;
+}
+
+.error-container h2 {
+  color: #dc3545;
+}
+
+[end of src/components/ViewJobApplicants.css]

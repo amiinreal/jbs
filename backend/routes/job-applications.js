@@ -68,28 +68,40 @@ const ensureApplicationsTable = async () => {
 
 // Apply for a job
 router.post('/:jobId/apply', checkAuthMiddleware, upload.single('resume'), async (req, res) => {
-  const { jobId } = req.params;
+  const { jobId } = req.params; // This will be available due to mergeParams in the router setup
   const userId = req.user.id;
-  const { coverLetter, phone, availability } = req.body;
+  const { coverLetter, phone, availability, custom_answers } = req.body; // Expect custom_answers
   const resumePath = req.file ? `/uploads/resumes/${path.basename(req.file.path)}` : null;
 
+  const client = await pool.connect(); // Use a client for transaction
+
   try {
-    // Ensure table exists
+    await client.query('BEGIN'); // Start transaction
+
+    // Ensure table exists - this function uses the default pool, not the client.
+    // For DDL like CREATE TABLE IF NOT EXISTS, it's generally fine outside explicit transaction control
+    // if it's idempotent and doesn't interfere with ongoing transactions.
+    // However, for consistency in a transactional operation, all queries should ideally use the same client.
+    // For now, we'll assume ensureApplicationsTable is safe to call as is.
     await ensureApplicationsTable();
 
     // Check if job exists
-    const jobCheck = await pool.query('SELECT id FROM job_listings WHERE id = $1', [jobId]);
+    const jobCheck = await client.query('SELECT id FROM job_listings WHERE id = $1', [jobId]);
     if (jobCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      client.release();
       return res.status(404).json({ success: false, error: 'Job not found' });
     }
 
     // Check if already applied
-    const existingCheck = await pool.query(
+    const existingCheck = await client.query(
       'SELECT id FROM job_applications WHERE job_id = $1 AND user_id = $2',
       [jobId, userId]
     );
 
     if (existingCheck.rows.length > 0) {
+      await client.query('ROLLBACK');
+      client.release();
       return res.status(400).json({ 
         success: false, 
         error: 'You have already applied for this job' 
@@ -97,34 +109,69 @@ router.post('/:jobId/apply', checkAuthMiddleware, upload.single('resume'), async
     }
 
     // Create application
-    const result = await pool.query(`
+    const applicationResult = await client.query(`
       INSERT INTO job_applications (
         job_id, user_id, cover_letter, resume_path, phone, availability
       ) VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING id
     `, [
-      jobId, userId, coverLetter, resumePath, phone, availability
+      jobId, userId, coverLetter || null, resumePath, phone || null, availability || null
     ]);
+    const applicationId = applicationResult.rows[0].id;
 
-    // Notify job poster (this would be implemented with actual messaging/email)
-    // For now, just log it
-    console.log(`User ${userId} applied for job ${jobId}`);
+    // Process custom answers
+    if (custom_answers && Array.isArray(custom_answers)) {
+      const jobQuestions = await client.query(
+        'SELECT id, question_text, is_required FROM job_custom_questions WHERE job_id = $1',
+        [jobId]
+      );
+
+      for (const question of jobQuestions.rows) {
+        const userAnswer = custom_answers.find(ans => ans.question_id === question.id || String(ans.question_id) === String(question.id) );
+        
+        if (question.is_required) {
+          if (!userAnswer || !userAnswer.answer_text || userAnswer.answer_text.trim() === '') {
+            await client.query('ROLLBACK');
+            client.release();
+            return res.status(400).json({
+              success: false,
+              error: `Answer for required question "${question.question_text}" is missing.`
+            });
+          }
+        }
+
+        if (userAnswer && userAnswer.answer_text && userAnswer.answer_text.trim() !== '') {
+          await client.query(
+            `INSERT INTO job_application_custom_answers (application_id, question_id, answer_text)
+             VALUES ($1, $2, $3)`,
+            [applicationId, question.id, userAnswer.answer_text]
+          );
+        }
+      }
+    }
+
+    await client.query('COMMIT'); // Commit transaction
+    console.log(`User ${userId} applied for job ${jobId}, application ID: ${applicationId}`);
 
     res.json({
       success: true,
       message: 'Application submitted successfully',
       data: {
-        id: result.rows[0].id,
+        id: applicationId,
         jobId,
         status: 'pending'
       }
     });
+
   } catch (err) {
+    await client.query('ROLLBACK'); // Rollback on error
     console.error('Error applying for job:', err);
     res.status(500).json({
       success: false,
       error: 'Failed to submit application: ' + err.message
     });
+  } finally {
+    client.release(); // Release client
   }
 });
 
@@ -181,18 +228,36 @@ router.get('/:jobId/applications', checkAuthMiddleware, async (req, res) => {
     }
 
     // Get all applications
-    const applications = await pool.query(`
+    const applicationsResult = await pool.query(`
       SELECT ja.*, 
-        u.username, u.email, u.profile_image_url
+        u.username AS applicant_username, 
+        u.email AS applicant_email, 
+        u.profile_image_url AS applicant_profile_image_url
       FROM job_applications ja
       JOIN users u ON ja.user_id = u.id
       WHERE ja.job_id = $1
       ORDER BY ja.created_at DESC
     `, [jobId]);
 
+    const applicationsWithAnswers = [];
+    for (const app of applicationsResult.rows) {
+      const customAnswersResult = await pool.query(
+        `SELECT jcq.question_text, jaca.answer_text 
+         FROM job_application_custom_answers jaca
+         JOIN job_custom_questions jcq ON jaca.question_id = jcq.id
+         WHERE jaca.application_id = $1
+         ORDER BY jcq.sort_order ASC, jcq.created_at ASC`,
+        [app.id]
+      );
+      applicationsWithAnswers.push({
+        ...app,
+        custom_application_responses: customAnswersResult.rows
+      });
+    }
+
     res.json({
       success: true,
-      data: applications.rows
+      data: applicationsWithAnswers
     });
   } catch (err) {
     console.error('Error fetching job applications:', err);

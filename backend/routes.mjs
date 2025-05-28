@@ -9,6 +9,7 @@ import { checkAuthMiddleware, checkAdminMiddleware, checkVerifiedCompanyMiddlewa
 import { upload, registerFile } from './services/fileStorage.js';
 import { fileURLToPath } from 'url';
 import jobsRouter from './routes/jobs.js';
+import jobCustomQuestionsRouter from './routes/jobCustomQuestions.js'; // Import the new router
 
 const router = express.Router();
 
@@ -1663,5 +1664,11 @@ router.get('/system/db-check', async (req, res) => {
 });
 
 router.use('/jobs', jobsRouter);
+
+// Mount the custom questions router
+// This will make routes like POST /api/jobs/:jobId/questions available
+// and PUT /api/jobs/:jobId/questions/:questionId available
+router.use('/jobs/:jobId/questions', jobCustomQuestionsRouter);
+
 
 export default router;

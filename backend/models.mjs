@@ -48,21 +48,6 @@ const createTables = async () => {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
-      CREATE TABLE IF NOT EXISTS jobs (
-        id SERIAL PRIMARY KEY,
-        title VARCHAR(100),
-        description TEXT,
-        salary NUMERIC,
-        location VARCHAR(100),
-        type VARCHAR(50),
-        experience_required VARCHAR(50),
-        is_published BOOLEAN DEFAULT FALSE,
-        user_id INT REFERENCES users(id),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        -- Removing the invalid check constraint
-      );
-
       CREATE TABLE IF NOT EXISTS houses (
         id SERIAL PRIMARY KEY,
         title VARCHAR(255), -- Add new title field
@@ -188,36 +173,6 @@ const createTables = async () => {
     console.log('Tables created successfully');
 
     // Add trigger function to enforce job posting restrictions
-    await client.query(`
-      CREATE OR REPLACE FUNCTION check_job_poster_verification()
-      RETURNS TRIGGER AS $$
-      DECLARE
-        is_verified BOOLEAN;
-      BEGIN
-        -- Check if the user is a verified company
-        SELECT is_verified_company INTO is_verified 
-        FROM users 
-        WHERE id = NEW.user_id;
-        
-        IF is_verified IS NOT TRUE THEN
-          RAISE EXCEPTION 'Only verified companies can post job listings';
-        END IF;
-        
-        RETURN NEW;
-      END;
-      $$ LANGUAGE plpgsql;
-      
-      -- Drop the trigger if it exists
-      DROP TRIGGER IF EXISTS enforce_job_poster_verification ON jobs;
-      
-      -- Create trigger to check verification before insert or update
-      CREATE TRIGGER enforce_job_poster_verification
-      BEFORE INSERT OR UPDATE ON jobs
-      FOR EACH ROW
-      EXECUTE FUNCTION check_job_poster_verification();
-    `);
-    console.log('Job posting restriction trigger created successfully');
-    
     // Update tables to add image support
     await client.query(`
       -- Create files table to store file metadata
@@ -228,7 +183,7 @@ const createTables = async () => {
         mime_type VARCHAR(100) NOT NULL,
         size INT NOT NULL,
         user_id INT REFERENCES users(id),
-        entity_type VARCHAR(50), -- 'house', 'car', 'item', 'job', 'user'
+        entity_type VARCHAR(50), -- 'house', 'car', 'item', 'user'
         entity_id INT,           -- ID of the related entity
         is_public BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -239,7 +194,6 @@ const createTables = async () => {
       ALTER TABLE houses ADD COLUMN IF NOT EXISTS primary_image_id INT REFERENCES files(id) ON DELETE SET NULL;
       ALTER TABLE cars ADD COLUMN IF NOT EXISTS primary_image_id INT REFERENCES files(id) ON DELETE SET NULL;
       ALTER TABLE items ADD COLUMN IF NOT EXISTS primary_image_id INT REFERENCES files(id) ON DELETE SET NULL;
-      ALTER TABLE jobs ADD COLUMN IF NOT EXISTS banner_image_id INT REFERENCES files(id) ON DELETE SET NULL;
       
       -- Add image URL columns
       ALTER TABLE houses ADD COLUMN IF NOT EXISTS image_url VARCHAR(255);
@@ -248,7 +202,6 @@ const createTables = async () => {
       ALTER TABLE cars ADD COLUMN IF NOT EXISTS image_urls TEXT[];
       ALTER TABLE items ADD COLUMN IF NOT EXISTS image_url VARCHAR(255);
       ALTER TABLE items ADD COLUMN IF NOT EXISTS image_urls TEXT[];
-      ALTER TABLE jobs ADD COLUMN IF NOT EXISTS banner_image_url VARCHAR(255);
       ALTER TABLE users ADD COLUMN IF NOT EXISTS logo_url VARCHAR(255);
       ALTER TABLE users ADD COLUMN IF NOT EXISTS logo_urls TEXT[];
       ALTER TABLE users ADD COLUMN IF NOT EXISTS image_url VARCHAR(255);
@@ -308,9 +261,33 @@ const createTables = async () => {
         CONSTRAINT "session_pkey" PRIMARY KEY ("sid")
       )
     `);
+
+    // Tables for Customizable Application Forms
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS job_custom_questions (
+        id SERIAL PRIMARY KEY,
+        job_id INTEGER REFERENCES job_listings(id) ON DELETE CASCADE NOT NULL,
+        question_text TEXT NOT NULL,
+        question_type VARCHAR(20) NOT NULL, -- 'text', 'textarea', 'select', 'radio', 'checkbox'
+        options TEXT DEFAULT NULL, -- JSON string array for 'select', 'radio', 'checkbox'
+        is_required BOOLEAN DEFAULT FALSE,
+        sort_order INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS job_application_custom_answers (
+        id SERIAL PRIMARY KEY,
+        application_id INTEGER REFERENCES job_applications(id) ON DELETE CASCADE NOT NULL,
+        question_id INTEGER REFERENCES job_custom_questions(id) ON DELETE CASCADE NOT NULL,
+        answer_text TEXT NOT NULL, -- Could be JSON for multiple selections from checkbox
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log('Custom job question tables created or already exist.');
     
     await client.query('COMMIT');
-    console.log('Tables created or already exist.');
+    console.log('All table creations and modifications committed.');
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Error creating tables:', err);

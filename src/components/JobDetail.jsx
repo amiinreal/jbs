@@ -19,57 +19,64 @@ const JobDetail = ({ user, isAuthenticated }) => {
     phone: '',
     availability: ''
   });
+  const [jobCustomQuestions, setJobCustomQuestions] = useState([]);
+  const [customAnswers, setCustomAnswers] = useState({}); // Store answers as { questionId: answer }
 
   useEffect(() => {
-    const fetchJobData = async () => {
+    const fetchJobAndRelatedData = async () => {
       try {
         setLoading(true);
         setError(null);
-        
+        setApplicationStatus(null); // Reset application status on job change
+        setCustomAnswers({}); // Reset custom answers
+        setJobCustomQuestions([]); // Reset custom questions
+
         // Fetch job details
         const jobResponse = await fetch(`/api/jobs/${jobId}`);
+        if (!jobResponse.ok) throw new Error(`Failed to fetch job information: ${jobResponse.status}`);
+        const jobResult = await jobResponse.json();
+        if (!jobResult.success || !jobResult.data) throw new Error('No job data returned from server');
         
-        if (!jobResponse.ok) {
-          throw new Error(`Failed to fetch job information: ${jobResponse.status}`);
-        }
-        
-        const jobData = await jobResponse.json();
-        
-        if (!jobData.success || !jobData.data) {
-          throw new Error('No job data returned from server');
-        }
-        
-        setJob(jobData.data);
-        
-        // Fetch company details if we have user_id
-        if (jobData.data.user_id) {
-          const companyResponse = await fetch(`/api/users/${jobData.data.user_id}/public`);
-          
+        const currentJob = jobResult.data;
+        setJob(currentJob);
+
+        // Fetch company details
+        if (currentJob.user_id) {
+          const companyResponse = await fetch(`/api/users/${currentJob.user_id}/public`);
           if (companyResponse.ok) {
             const companyData = await companyResponse.json();
-            if (companyData.success && companyData.data) {
-              setCompany(companyData.data);
-            }
+            if (companyData.success) setCompany(companyData.data);
           } else {
             console.warn('Failed to fetch company information:', companyResponse.status);
           }
         }
-        
-        // Check if user has already applied for this job (if authenticated)
-        if (isAuthenticated && user) {
-          try {
-            const applicationCheckResponse = await fetch(`/api/jobs/${jobId}/applications/check`, {
-              credentials: 'include'
-            });
-            
-            if (applicationCheckResponse.ok) {
-              const applicationCheckData = await applicationCheckResponse.json();
-              if (applicationCheckData.hasApplied) {
-                setApplicationStatus('applied');
-              }
+
+        // Fetch custom questions if native application type
+        if (currentJob.application_type === 'native') {
+          const questionsResponse = await fetch(`/api/jobs/${jobId}/questions`);
+          if (questionsResponse.ok) {
+            const questionsResult = await questionsResponse.json();
+            if (questionsResult.success) {
+              setJobCustomQuestions(questionsResult.data.map(q => ({
+                ...q,
+                options: q.options ? JSON.parse(q.options) : [] // Ensure options are parsed
+              })));
+            } else {
+               console.warn('Could not retrieve custom questions:', questionsResult.error);
             }
-          } catch (appCheckError) {
-            console.warn('Failed to check application status:', appCheckError);
+          } else {
+            console.warn('Failed to fetch custom questions for job:', questionsResponse.status);
+          }
+        }
+
+        // Check if user has already applied (if authenticated)
+        if (isAuthenticated && user && currentJob.application_type === 'native') {
+          const appCheckResponse = await fetch(`/api/jobs/${jobId}/applications/check`, { credentials: 'include' });
+          if (appCheckResponse.ok) {
+            const appCheckData = await appCheckResponse.json();
+            if (appCheckData.hasApplied) setApplicationStatus('applied');
+          } else {
+             console.warn('Failed to check application status:', appCheckResponse.status);
           }
         }
       } catch (err) {
@@ -80,73 +87,172 @@ const JobDetail = ({ user, isAuthenticated }) => {
       }
     };
     
-    fetchJobData();
-  }, [jobId, isAuthenticated, user]);
+    fetchJobAndRelatedData();
+  }, [jobId, isAuthenticated, user]); // Rerun if jobId, user, or auth status changes
   
   const handleApplyClick = () => {
-    // Check if user is authenticated
     if (!isAuthenticated) {
-      // Store the current URL in session storage so we can redirect back after login
       sessionStorage.setItem('redirectAfterLogin', `/jobs/${jobId}`);
       navigate('/login');
       return;
     }
-    
-    // Show application form
+    if (job?.application_type === 'external' && job?.external_application_url) {
+      let url = job.external_application_url;
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = `https://${url}`;
+      }
+      window.open(url, '_blank', 'noopener,noreferrer');
+      return;
+    }
     setApplying(true);
+  };
+
+  const handleCustomAnswerChange = (questionId, value, questionType) => {
+    setCustomAnswers(prev => {
+      const newAnswers = { ...prev };
+      if (questionType === 'checkbox') {
+        const currentSelection = newAnswers[questionId] ? JSON.parse(newAnswers[questionId]) : [];
+        if (currentSelection.includes(value)) {
+          newAnswers[questionId] = JSON.stringify(currentSelection.filter(v => v !== value));
+        } else {
+          newAnswers[questionId] = JSON.stringify([...currentSelection, value]);
+        }
+        // If all checkboxes for this question are unchecked, make it an empty array string
+        if (JSON.parse(newAnswers[questionId]).length === 0) {
+            newAnswers[questionId] = JSON.stringify([]);
+        }
+      } else {
+        newAnswers[questionId] = value;
+      }
+      return newAnswers;
+    });
   };
   
   const handleApplicationSubmit = async (e) => {
     e.preventDefault();
-    
-    try {
-      const formData = new FormData();
-      formData.append('coverLetter', applicationData.coverLetter);
-      formData.append('phone', applicationData.phone);
-      formData.append('availability', applicationData.availability);
-      
-      if (applicationData.resume) {
-        formData.append('resume', applicationData.resume);
+    let submissionError = null;
+
+    // Client-side validation for required custom questions
+    for (const q of jobCustomQuestions) {
+      if (q.is_required) {
+        const answer = customAnswers[q.id];
+        let answerIsEmpty = !answer || answer.trim() === '';
+        if (q.question_type === 'checkbox') {
+             answerIsEmpty = !answer || JSON.parse(answer).length === 0;
+        }
+        if (answerIsEmpty) {
+          submissionError = `Please answer the required question: "${q.question_text}"`;
+          break;
+        }
       }
-      
+    }
+
+    if (submissionError) {
+      alert(submissionError); // Or display it more elegantly
+      setApplicationStatus('error'); // Indicate an error state
+      return;
+    }
+
+    const payload = new FormData();
+    payload.append('coverLetter', applicationData.coverLetter);
+    payload.append('phone', applicationData.phone);
+    payload.append('availability', applicationData.availability);
+    if (applicationData.resume) {
+      payload.append('resume', applicationData.resume);
+    }
+
+    const formattedCustomAnswers = Object.entries(customAnswers).map(([question_id, answer_text]) => ({
+      question_id: parseInt(question_id, 10),
+      answer_text
+    }));
+    payload.append('custom_answers', JSON.stringify(formattedCustomAnswers)); // FormData expects string values
+
+    try {
       const response = await fetch(`/api/jobs/${jobId}/apply`, {
         method: 'POST',
         credentials: 'include',
-        body: formData
+        body: payload 
       });
       
+      const result = await response.json(); // Try to parse JSON regardless of response.ok
       if (!response.ok) {
-        throw new Error(`Application failed: ${response.status}`);
+        throw new Error(result.error || `Application failed: ${response.status}`);
       }
       
-      const data = await response.json();
-      
-      if (data.success) {
+      if (result.success) {
         setApplying(false);
         setApplicationStatus('success');
       } else {
-        throw new Error(data.error || 'Application failed');
+        throw new Error(result.error || 'Application submission failed.');
       }
     } catch (err) {
       console.error('Error applying for job:', err);
-      setApplicationStatus('error');
+      setApplicationStatus('error'); // Keep error state
+      // Display specific error to user if available from server, otherwise generic
+      alert(err.message || 'There was a problem submitting your application. Please try again later.');
     }
   };
   
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setApplicationData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value // Though no standard checkboxes in main form yet
     }));
   };
   
   const handleFileChange = (e) => {
-    setApplicationData(prev => ({
-      ...prev,
-      resume: e.target.files[0]
-    }));
+    setApplicationData(prev => ({ ...prev, resume: e.target.files[0] }));
   };
+
+  const renderCustomQuestionField = (q) => {
+    const answer = customAnswers[q.id] || (q.question_type === 'checkbox' ? '[]' : '');
+    const commonProps = {
+      id: `custom_q_${q.id}`,
+      name: `custom_q_${q.id}`,
+      required: q.is_required,
+    };
+
+    switch (q.question_type) {
+      case 'text':
+        return <input type="text" {...commonProps} value={answer} onChange={(e) => handleCustomAnswerChange(q.id, e.target.value, q.question_type)} className="form-input" />;
+      case 'textarea':
+        return <textarea {...commonProps} value={answer} onChange={(e) => handleCustomAnswerChange(q.id, e.target.value, q.question_type)} rows="3" className="form-textarea"></textarea>;
+      case 'select':
+        return (
+          <select {...commonProps} value={answer} onChange={(e) => handleCustomAnswerChange(q.id, e.target.value, q.question_type)} className="form-select">
+            <option value="">Select an option</option>
+            {q.options.map((opt, idx) => <option key={idx} value={opt}>{opt}</option>)}
+          </select>
+        );
+      case 'radio':
+        return (
+          <div className="radio-group-vertical">
+            {q.options.map((opt, idx) => (
+              <label key={idx} className="radio-label">
+                <input type="radio" name={commonProps.name} value={opt} checked={answer === opt} onChange={(e) => handleCustomAnswerChange(q.id, e.target.value, q.question_type)} required={q.is_required} />
+                {opt}
+              </label>
+            ))}
+          </div>
+        );
+      case 'checkbox': // Assuming multiple selections
+        const selectedValues = JSON.parse(answer);
+        return (
+          <div className="checkbox-group-vertical">
+            {q.options.map((opt, idx) => (
+              <label key={idx} className="checkbox-label">
+                <input type="checkbox" value={opt} checked={selectedValues.includes(opt)} onChange={(e) => handleCustomAnswerChange(q.id, e.target.value, q.question_type)} />
+                {opt}
+              </label>
+            ))}
+          </div>
+        );
+      default:
+        return <p>Unsupported question type: {q.question_type}</p>;
+    }
+  };
+
 
   if (loading) {
     return (
@@ -260,19 +366,22 @@ const JobDetail = ({ user, isAuthenticated }) => {
           </section>
           
           {/* Application form */}
-          {!applying && !applicationStatus && (
+          {!applying && !applicationStatus && job && (
             <div className="application-cta">
               <button 
                 onClick={handleApplyClick} 
                 className="apply-button"
-                disabled={applicationStatus === 'applied'}
+                disabled={applicationStatus === 'applied' && job.application_type === 'native'} 
               >
-                Apply for this Job
+                {job.application_type === 'external' 
+                  ? 'Apply on Company Site' 
+                  : (applicationStatus === 'applied' ? 'Already Applied' : 'Apply for this Job')}
               </button>
             </div>
           )}
           
-          {applying && (
+          {/* Native application form should only show if job.application_type is 'native' */}
+          {applying && job?.application_type === 'native' && (
             <section className="application-form-section">
               <h3>Apply for this Position</h3>
               <form onSubmit={handleApplicationSubmit} className="application-form">
@@ -291,39 +400,35 @@ const JobDetail = ({ user, isAuthenticated }) => {
                 
                 <div className="form-group">
                   <label htmlFor="resume">Resume / CV</label>
-                  <input 
-                    type="file" 
-                    id="resume" 
-                    name="resume" 
-                    onChange={handleFileChange}
-                    accept=".pdf,.doc,.docx"
-                  />
+                  <input type="file" id="resume" name="resume" onChange={handleFileChange} accept=".pdf,.doc,.docx" className="form-input-file"/>
                   <small className="form-text">Upload your resume (PDF, DOC, or DOCX)</small>
                 </div>
                 
                 <div className="form-group">
                   <label htmlFor="phone">Phone Number</label>
-                  <input 
-                    type="tel" 
-                    id="phone" 
-                    name="phone" 
-                    value={applicationData.phone}
-                    onChange={handleInputChange}
-                    placeholder="Your contact phone number"
-                  />
+                  <input type="tel" id="phone" name="phone" value={applicationData.phone} onChange={handleInputChange} placeholder="Your contact phone number" className="form-input"/>
                 </div>
                 
                 <div className="form-group">
                   <label htmlFor="availability">Availability</label>
-                  <input 
-                    type="text" 
-                    id="availability" 
-                    name="availability" 
-                    value={applicationData.availability}
-                    onChange={handleInputChange}
-                    placeholder="When can you start? Do you have any scheduling constraints?"
-                  />
+                  <input type="text" id="availability" name="availability" value={applicationData.availability} onChange={handleInputChange} placeholder="When can you start? Any scheduling constraints?" className="form-input"/>
                 </div>
+
+                {/* Custom Questions Section */}
+                {jobCustomQuestions.length > 0 && (
+                  <div className="custom-questions-section">
+                    <h4>Additional Questions:</h4>
+                    {jobCustomQuestions.map(q => (
+                      <div key={q.id} className="form-group">
+                        <label htmlFor={`custom_q_${q.id}`}>
+                          {q.question_text}
+                          {q.is_required && <span className="required-asterisk">*</span>}
+                        </label>
+                        {renderCustomQuestionField(q)}
+                      </div>
+                    ))}
+                  </div>
+                )}
                 
                 <div className="form-actions">
                   <button 

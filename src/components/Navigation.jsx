@@ -152,8 +152,11 @@ const Navigation = ({ user, isAuthenticated, setIsAuthenticated, handleLogout, a
                     <Link to="/dashboard" onClick={() => setUserMenuOpen(false)}>Dashboard</Link>
                     <Link to="/messages" onClick={() => setUserMenuOpen(false)}>Messages</Link>
                     <Link to="/my-listings" onClick={() => setUserMenuOpen(false)}>My Listings</Link>
-                    {displayUser?.isCompany && (
-                      <Link to="/company-profile" onClick={() => setUserMenuOpen(false)}>Company Profile</Link>
+                    {displayUser?.is_company && ( // Changed from isCompany to is_company to match user object
+                      <>
+                        <Link to="/company-profile" onClick={() => setUserMenuOpen(false)}>Company Profile</Link>
+                        <Link to="/manage-jobs" onClick={() => setUserMenuOpen(false)}>Manage Jobs</Link> 
+                      </>
                     )}
                     {displayUser?.role === 'admin' && (
                       <Link to="/admin" onClick={() => setUserMenuOpen(false)}>Admin</Link>
