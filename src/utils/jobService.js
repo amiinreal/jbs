@@ -102,14 +102,14 @@ const getJobListings = async () => {
     const backendUrl = getBaseUrl();
     
     // Try to fetch from the backend directly
-    const response = await fetch(`${backendUrl}/api/jobs/public`, {
+    const response = await fetch(`${backendUrl}/api/jobs`, {
       credentials: 'include'
     });
     
     if (!response.ok) {
       // If that fails, try the Vite proxy
       console.warn('Direct endpoint failed, trying proxy', response.status);
-      const proxyResponse = await fetch('/api/jobs/public', {
+      const proxyResponse = await fetch('/api/jobs', {
         credentials: 'include'
       });
       
