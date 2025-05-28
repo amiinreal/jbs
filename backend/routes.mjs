@@ -8,6 +8,7 @@ import multer from 'multer';
 import { checkAuthMiddleware, checkAdminMiddleware, checkVerifiedCompanyMiddleware } from './middleware/auth.js';
 import { upload, registerFile } from './services/fileStorage.js';
 import { fileURLToPath } from 'url';
+import jobsRouter from './routes/jobs.js';
 
 const router = express.Router();
 
@@ -41,17 +42,6 @@ const isAdmin = checkAdminMiddleware;
 const isVerifiedCompany = checkVerifiedCompanyMiddleware;
 
 // Public routes for viewing listings (no auth required)
-// Jobs listing route - public access
-router.get('/jobs', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM jobs WHERE is_published = TRUE ORDER BY created_at DESC');
-    res.json({ success: true, data: result.rows });
-  } catch (err) {
-    console.error('Error fetching jobs:', err);
-    res.status(500).json({ success: false, error: 'Failed to fetch jobs' });
-  }
-});
-
 // Houses listing route - public access
 router.get('/houses', async (req, res) => {
   try {
@@ -401,16 +391,6 @@ router.get('/messages/unread/count', checkAuth, async (req, res) => {
 });
 
 // Public routes for viewing listings
-router.get('/jobs/public', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM jobs WHERE is_published = TRUE ORDER BY created_at DESC');
-    res.json({ success: true, data: result.rows });
-  } catch (err) {
-    console.error('Error fetching jobs:', err);
-    res.status(500).json({ success: false, error: 'Failed to fetch jobs' });
-  }
-});
-
 router.get('/houses/public', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM houses WHERE is_published = TRUE ORDER BY created_at DESC');
@@ -1681,5 +1661,7 @@ router.get('/system/db-check', async (req, res) => {
     res.status(500).json({ success: false, connected: false, error: err.message });
   }
 });
+
+router.use('/jobs', jobsRouter);
 
 export default router;
