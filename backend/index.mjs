@@ -172,6 +172,29 @@ try {
   });
 }
 
+// Global API Error Handler
+app.use((err, req, res, next) => {
+  if (req.path.startsWith('/api/')) {
+    console.error('Global API Error Handler caught:', err.stack || err); // Log the error stack or error itself
+    const statusCode = err.status || err.statusCode || 500;
+    const errorMessage = err.message || 'An unexpected server error occurred.';
+    
+    // Ensure not to set headers if already sent (though less likely here)
+    if (res.headersSent) {
+      return next(err);
+    }
+
+    res.status(statusCode).json({
+      success: false,
+      error: errorMessage,
+      ...(process.env.NODE_ENV === 'development' && { stack_trace: err.stack }) // Send stack in dev
+    });
+  } else {
+    // For non-API paths, delegate to the default Express error handler
+    next(err);
+  }
+});
+
 // Start the server
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
