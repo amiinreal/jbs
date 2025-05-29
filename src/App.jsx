@@ -265,13 +265,9 @@ function App() {
   }
 
   return (
-    // Router should be the outermost component if App is the root for routing
-    // Or, if main.jsx has Router, then App doesn't need it. Assuming App is root for routing here.
-    <Router> 
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
-    </Router>
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 
