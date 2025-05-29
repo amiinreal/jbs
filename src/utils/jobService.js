@@ -16,80 +16,24 @@ const getBaseUrl = () => {
  * @returns {Promise<Object>} - The created job listing
  */
 const createJobListing = async (jobData) => {
+  const endpointUrl = '/api/jobs';
   try {
-    // Get the base API URL
-    const backendUrl = getBaseUrl();
-    console.log('Using backend URL:', backendUrl);
-    
-    console.log('Creating job with data:', jobData);
-    
-    // Try multiple endpoints with different approaches
-    const endpoints = [
-      // Try proxy endpoint first (most reliable in development)
-      { url: '/api/jobs', useProxy: true },
-      // Then try direct backend URL
-      { url: `${backendUrl}/api/jobs`, useProxy: false },
-      // Alternative endpoint names as fallbacks
-      { url: `${backendUrl}/api/job-listings`, useProxy: false },
-      { url: `/api/job-listings`, useProxy: true }
-    ];
-    
-    let lastError = null;
-    
-    // Try each endpoint until one succeeds
-    for (const endpoint of endpoints) {
-      try {
-        console.log(`Trying ${endpoint.useProxy ? 'proxy' : 'direct'} endpoint: ${endpoint.url}`);
-        
-        const response = await fetch(endpoint.url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify(jobData)
-        });
-        
-        console.log(`Endpoint ${endpoint.url} response status:`, response.status);
-        
-        if (response.ok) {
-          const data = await response.json();
-          console.log('Job creation successful:', data);
-          return data.data || data;
-        }
-        
-        // Store the last error for reporting if all endpoints fail
-        lastError = new Error(`Server returned ${response.status}`);
-        
-        // For 404 errors, continue to next endpoint
-        if (response.status === 404) {
-          console.log(`Endpoint ${endpoint.url} not found, trying next endpoint`);
-          continue;
-        }
-        
-        // For other errors, try to parse the error response
-        try {
-          const errorData = await response.json();
-          throw new Error(errorData.error || `Server returned ${response.status}`);
-        } catch (parseError) {
-          throw new Error(`Server returned ${response.status}`);
-        }
-      } catch (endpointError) {
-        // Only store network errors, not response errors
-        if (endpointError.message.includes('Failed to fetch')) {
-          lastError = endpointError;
-          console.error(`Network error with endpoint ${endpoint.url}:`, endpointError);
-        } else {
-          throw endpointError;
-        }
-      }
+    console.log(`Creating job via ${endpointUrl} with data:`, jobData);
+    const response = await fetch(endpointUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(jobData)
+    });
+
+    const responseData = await response.json();
+    if (!response.ok) {
+      throw new Error(responseData.error || `Server error: ${response.status}`);
     }
-    
-    // If we've tried all endpoints and none worked
-    throw lastError || new Error('All job creation endpoints failed');
+    return responseData.data || responseData; // Assuming backend sends { success: true, data: ... } or just data
   } catch (error) {
-    console.error('Error creating job listing:', error);
-    throw new Error(`The job creation service is currently unavailable. Please try again later. (${error.message})`);
+    console.error('Error in createJobListing:', error);
+    throw error; // Re-throw for the component to handle
   }
 };
 

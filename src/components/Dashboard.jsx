@@ -127,12 +127,6 @@ const Dashboard = ({ userRole, isCompany, isVerifiedCompany }) => {
       
       <div className="dashboard-welcome">
         <h2>Welcome to your dashboard!</h2>
-        {isCompany && !isVerifiedCompany && (
-          <div className="verification-notice">
-            <p>Your company is not verified yet. Only verified companies can post job listings.</p>
-            <Link to="/verification" className="button">Apply for Verification</Link>
-          </div>
-        )}
         {isCompany && isVerifiedCompany && (
           <div className="verified-company-notice">
             <p>Your company is verified! You can now post job listings.</p>
@@ -152,8 +146,8 @@ const Dashboard = ({ userRole, isCompany, isVerifiedCompany }) => {
       {/* Show verification status if they're a company but not verified */}
       {isCompany && !isVerifiedCompany && (
         <div className="verification-section">
-          <h3>Company Verification Status</h3>
-          <p>Your company verification is pending. Only verified companies can post job listings.</p>
+          <h3>Company Application Submitted</h3>
+          <p>Your company application has been submitted. Check its current status or update your application.</p>
           <Link to="/verification-status" className="status-btn">Check Verification Status</Link>
         </div>
       )}

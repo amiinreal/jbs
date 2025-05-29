@@ -26,6 +26,29 @@ const CreateAd = ({ isCompany, isVerifiedCompany, user, initialType }) => {
   const navigate = useNavigate();
   const queryParams = new URLSearchParams(location.search);
   const initialAdType = queryParams.get('type') || 'job';
+  
+  // Initialize formData based on adType
+  useEffect(() => {
+    if (adType === 'job') {
+      setFormData({
+        title: '',
+        companyName: isCompany && user?.company_name ? user.company_name : '',
+        location: '',
+        employmentType: 'full-time',
+        salary: '',
+        experience: '',
+        description: '',
+        contact_phone: '',
+        is_remote: false,
+        application_type: 'native',
+        external_application_url: ''
+      });
+    } else {
+      // Reset for other types or set their specific initial fields
+      setFormData({}); 
+    }
+  }, [adType, isCompany, user]);
+
 
   // Quill modules and formats configuration
   const modules = {
@@ -67,10 +90,10 @@ const CreateAd = ({ isCompany, isVerifiedCompany, user, initialType }) => {
 
   // Add the missing handleInputChange function
   const handleInputChange = (event) => {
-    const { name, value } = event.target;
+    const { name, value, type, checked } = event.target;
     setFormData(prevData => ({
       ...prevData,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     }));
   };
 
@@ -184,65 +207,22 @@ const CreateAd = ({ isCompany, isVerifiedCompany, user, initialType }) => {
           experience_required: formData.experience || '',
           banner_image_url: bannerUrl,
           contact_email: user?.email || '',
+          contact_phone: formData.contact_phone || '',
+          is_remote: formData.is_remote || false,
+          application_type: formData.application_type || 'native',
+          external_application_url: formData.application_type === 'external' ? formData.external_application_url : '',
           is_published: true
         };
         
         console.log("Submitting job data:", jobData);
         
-        // Try using the job service first
-        try {
-          const result = await createJobListing(jobData);
-          handleSuccess(result);
-          
-          // Redirect to job listings after short delay
-          setTimeout(() => {
-            navigate('/my-listings');
-          }, 2000);
-          return; // Exit if successful
-        } catch (serviceError) {
-          console.error('Error creating job:', serviceError);
-          
-          // Try fallback approach if the service fails
-          console.log('Trying fallback approach for job creation...');
-          
-          const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-          
-          // Try direct endpoint with job_listings table name
-          try {
-            const response = await fetch(`${backendUrl}/api/jobs`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              credentials: 'include',
-              body: JSON.stringify(jobData)
-            });
-            
-            if (response.ok) {
-              const result = await response.json();
-              handleSuccess(result.data);
-              
-              // Redirect to job listings after short delay
-              setTimeout(() => {
-                navigate('/my-listings');
-              }, 2000);
-              return; // Exit if successful
-            }
-            
-            // If response is not ok, try to get error info
-            let errorMessage;
-            try {
-              const errorData = await response.json();
-              errorMessage = errorData.error || `Server returned ${response.status}`;
-            } catch (parseError) {
-              errorMessage = `Server returned ${response.status}`;
-            }
-            throw new Error(errorMessage);
-          } catch (fallbackError) {
-            // Propagate the fallback error
-            throw fallbackError;
-          }
-        }
+        const result = await createJobListing(jobData);
+        handleSuccess(result);
+        
+        // Redirect to job listings after short delay
+        setTimeout(() => {
+          navigate('/my-listings');
+        }, 2000);
       } 
       else if (adType === 'car') {
         // Car listing validation and submission
@@ -405,6 +385,62 @@ const CreateAd = ({ isCompany, isVerifiedCompany, user, initialType }) => {
             Use the toolbar to format your description with headers, bullet points, and more.
           </p>
         </div>
+
+        <div className="form-group">
+          <label htmlFor="contact_phone">Contact Phone</label>
+          <input
+            type="tel"
+            id="contact_phone"
+            name="contact_phone"
+            value={formData.contact_phone || ''}
+            onChange={handleInputChange}
+            disabled={!canCreateJobListing}
+            placeholder="e.g., 555-123-4567"
+          />
+        </div>
+
+        <div className="form-group form-group-checkbox">
+          <input
+            type="checkbox"
+            id="is_remote"
+            name="is_remote"
+            checked={formData.is_remote || false}
+            onChange={handleInputChange}
+            disabled={!canCreateJobListing}
+          />
+          <label htmlFor="is_remote">Remote Work Allowed</label>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="application_type">Application Type*</label>
+          <select
+            id="application_type"
+            name="application_type"
+            value={formData.application_type || 'native'}
+            onChange={handleInputChange}
+            required
+            disabled={!canCreateJobListing}
+          >
+            <option value="native">Native (Apply on this site)</option>
+            <option value="external">External (Apply on another site)</option>
+          </select>
+        </div>
+
+        {formData.application_type === 'external' && (
+          <div className="form-group">
+            <label htmlFor="external_application_url">External Application URL*</label>
+            <input
+              type="url"
+              id="external_application_url"
+              name="external_application_url"
+              value={formData.external_application_url || ''}
+              onChange={handleInputChange}
+              required={formData.application_type === 'external'}
+              disabled={!canCreateJobListing}
+              placeholder="https://example.com/apply-here"
+            />
+          </div>
+        )}
         
         <div className="form-group">
           <label htmlFor="banner">Job Banner Image</label>

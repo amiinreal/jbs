@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext'; // Import useAuth
 import './VerificationStatus.css';
 
 const VerificationStatus = () => {
   const [verificationStatus, setVerificationStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { refreshUserData } = useAuth(); // Get refreshUserData
 
   useEffect(() => {
     const fetchVerificationStatus = async () => {
@@ -20,6 +22,11 @@ const VerificationStatus = () => {
         
         const data = await response.json();
         setVerificationStatus(data);
+
+        // If status is approved, refresh user data in AuthContext
+        if (data && data.status === 'approved') {
+          await refreshUserData();
+        }
       } catch (err) {
         console.error('Error fetching verification status:', err);
         setError('Could not retrieve your verification status. Please try again later.');
@@ -29,7 +36,7 @@ const VerificationStatus = () => {
     };
     
     fetchVerificationStatus();
-  }, []);
+  }, [refreshUserData]); // Add refreshUserData to dependency array
 
   if (loading) {
     return (
@@ -97,7 +104,7 @@ const VerificationStatus = () => {
           {verificationStatus.status === 'approved' && (
             <div className="approved-message">
               <p>Your company has been verified! You can now post job listings.</p>
-              <Link to="/add-job" className="action-button">
+              <Link to="/new-ad?type=job" className="action-button">
                 Post a Job
               </Link>
             </div>

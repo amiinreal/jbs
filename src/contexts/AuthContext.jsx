@@ -40,54 +40,52 @@ export const AuthProvider = ({ children }) => {
     navigate('/login'); 
   };
 
-  // 5. useEffect hook to check auth status on mount
-  useEffect(() => {
-    const checkSessionAndFetchUser = async () => {
-      const sessionActive = localStorage.getItem('sessionActive');
-      if (sessionActive === 'true') {
-        try {
-          // Use the /api/auth/check endpoint
-          const response = await fetch('/api/auth/check', { 
-            method: 'GET',
-            headers: {
-              // No Authorization header needed if relying on session cookies
-              'Content-Type': 'application/json',
-            },
-            credentials: 'include', // Crucial for sending session cookies
-          });
+  // Function to refresh user data from backend (e.g., after verification)
+  const refreshUserData = async () => {
+    setLoading(true); // Set loading true while refreshing
+    try {
+      // Use the /api/auth/check endpoint
+      const response = await fetch('/api/auth/check', { 
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Crucial for sending session cookies
+      });
 
-          if (response.ok) {
-            const data = await response.json();
-            // data from /api/auth/check should be { isAuthenticated: true, user: { id: ..., ... } } or { isAuthenticated: false }
-            if (data.isAuthenticated && data.id) { // data.id is used as a proxy for data.user existing
-                                                      // but better to check for data.user directly if backend sends it
-              // The backend /api/auth/check endpoint returns user details like:
-              // { isAuthenticated: true, id: ..., username: ..., email: ..., role: ... }
-              // We pass 'success: true' as login function expects it.
-              login({ success: true, user: data }); 
-            } else {
-              // Session might be invalid or expired on backend
-              logout(); // This will clear localStorage 'sessionActive'
-            }
-          } else {
-            // Backend responded with an error (e.g., 401 Unauthorized if session is invalid)
-            logout(); // This will clear localStorage 'sessionActive'
-          }
-        } catch (error) {
-          console.error('Error checking session:', error);
+      if (response.ok) {
+        const data = await response.json();
+        // data from /api/auth/check should be { isAuthenticated: true, id: ..., ... }
+        // The backend now directly returns the user object compatible with login function's 'user' field
+        if (data.isAuthenticated && data.id) { 
+          login({ success: true, user: data }); // Call login with the user data from /auth/check
+        } else {
+          // Session might be invalid or expired on backend
           logout(); // This will clear localStorage 'sessionActive'
         }
       } else {
-        // No active session in localStorage
-        setIsAuthenticated(false); 
-        setCurrentUser(null);
-        // Ensure token is also cleared if it somehow exists, though it's not the primary mechanism now
-        // localStorage.removeItem('token'); // This is now handled by logout() if called
+        // Backend responded with an error
+        logout(); // This will clear localStorage 'sessionActive'
       }
-      setLoading(false); // Finished initial auth check
-    };
-
-    checkSessionAndFetchUser();
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+      logout(); // This will clear localStorage 'sessionActive'
+    } finally {
+      setLoading(false); // Finished refreshing
+    }
+  };
+  
+  // 5. useEffect hook to check auth status on mount
+  useEffect(() => {
+    const sessionActive = localStorage.getItem('sessionActive');
+    if (sessionActive === 'true') {
+      refreshUserData(); // Call the new refresh function
+    } else {
+      // No active session in localStorage
+      setIsAuthenticated(false); 
+      setCurrentUser(null);
+      setLoading(false); // Finished initial auth check (no session to verify)
+    }
   }, []); // Empty dependency array means this runs once on mount
 
   // Derived states for convenience (optional, but can be useful)
@@ -104,6 +102,7 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     loading, // Provide loading state for UI to respond to auth check
+    refreshUserData, // Expose the refresh function
     // Optional derived states:
     isCompany,
     isVerifiedCompany,

@@ -157,7 +157,7 @@ router.get('/user/listings', checkAuth, async (req, res) => {
 // Protected
 // Create new house listing - requires auth
 router.post('/houses', checkAuth, async (req, res) => {
-  const { title, address, price, description, number_of_bedrooms, number_of_bathrooms, square_footage, is_published, image_url, image_urls } = req.body;
+  const { title, address, price, description, number_of_bedrooms, number_of_bathrooms, square_footage, is_published, image_url, image_urls, primary_image_id } = req.body;
   const userId = req.user.id;
   
   try {
@@ -186,11 +186,11 @@ router.post('/houses', checkAuth, async (req, res) => {
       const result = await client.query(
         `INSERT INTO houses 
           (title, address, price, description, number_of_bedrooms, number_of_bathrooms, square_footage, 
-           is_published, user_id, image_url, image_urls) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
+           is_published, user_id, image_url, image_urls, primary_image_id) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) 
          RETURNING *`,
         [title, address, price, description, number_of_bedrooms, number_of_bathrooms, square_footage, 
-         is_published || false, userId, image_url, imageUrlsParam]
+         is_published || false, userId, image_url, imageUrlsParam, primary_image_id || null]
       );
       
       res.status(201).json({ success: true, data: result.rows[0] });

@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext'; // Import useAuth
 import './CompanyProfile.css';
 
-const CompanyProfile = ({ user }) => {
+const CompanyProfile = () => {
   const navigate = useNavigate();
+  const { currentUser, isVerifiedCompany: authIsVerifiedCompany, loading: authLoading } = useAuth(); // Get user from AuthContext
   const [profileData, setProfileData] = useState({
-    companyName: user?.company_name || '',
+    companyName: currentUser?.company_name || '',
     companyDescription: '',
     logoUrl: '',
-    isVerified: user?.isVerifiedCompany || false,
+    isVerified: authIsVerifiedCompany || false, // Use isVerifiedCompany from AuthContext initially
     jobs: [],
     stats: {
       totalListings: 0,
@@ -21,18 +23,23 @@ const CompanyProfile = ({ user }) => {
   const [error, setError] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    companyName: '',
+    companyName: currentUser?.company_name || '',
     companyDescription: ''
   });
 
   useEffect(() => {
-    if (!user?.isCompany) {
+    // Wait for authLoading to finish before checking currentUser
+    if (authLoading) {
+      return; // Or show a loading indicator for the whole page
+    }
+
+    if (!currentUser?.isCompany) {
       navigate('/company-registration');
       return;
     }
     
     fetchCompanyData();
-  }, [user, navigate]);
+  }, [currentUser, navigate, authLoading]); // Add authLoading to dependencies
 
   const fetchCompanyData = async () => {
     try {
@@ -61,10 +68,11 @@ const CompanyProfile = ({ user }) => {
       }
       
       setProfileData({
-        companyName: profileData.company_name || user.company_name || '',
+        companyName: profileData.company_name || currentUser?.company_name || '',
         companyDescription: profileData.company_description || '',
         logoUrl: profileData.logo_url || '',
-        isVerified: profileData.is_verified_company || user.isVerifiedCompany || false,
+        // isVerified from /api/company/profile is the source of truth for this component's display
+        isVerified: profileData.is_verified_company, 
         jobs,
         stats: {
           totalListings: jobs.length,
@@ -75,7 +83,7 @@ const CompanyProfile = ({ user }) => {
       });
       
       setFormData({
-        companyName: profileData.company_name || user.company_name || '',
+        companyName: profileData.company_name || currentUser?.company_name || '',
         companyDescription: profileData.company_description || ''
       });
     } catch (err) {
@@ -141,7 +149,7 @@ const CompanyProfile = ({ user }) => {
     }
   };
 
-  if (loading) {
+  if (authLoading || loading) { // Consider authLoading as well
     return (
       <div className="company-profile-container">
         <div className="loading-spinner"></div>
