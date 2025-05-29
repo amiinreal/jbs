@@ -119,5 +119,5 @@ export const useAuth = () => {
 };
 
 // 8. Export AuthContext (optional, if needed directly elsewhere, but useAuth is preferred)
-// export { AuthContext }; // Typically useAuth is sufficient for consumers
-[end of src/contexts/AuthContext.jsx]
+ export { AuthContext }; // Typically useAuth is sufficient for consumers
+

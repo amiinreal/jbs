@@ -19,4 +19,4 @@ router.put('/:questionId', authMiddleware, customQuestionsController.updateQuest
 router.delete('/:questionId', authMiddleware, customQuestionsController.deleteQuestion);
 
 export default router;
-[end of backend/routes/jobCustomQuestions.js]
+

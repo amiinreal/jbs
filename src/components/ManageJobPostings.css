@@ -1,0 +1,126 @@
+.manage-job-postings-container {
+  padding: 20px;
+  font-family: Arial, sans-serif;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.manage-job-postings-container .manage-jobs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.manage-job-postings-container h1 {
+  color: #333;
+  font-size: 28px;
+}
+
+.post-new-job-button {
+  padding: 10px 15px;
+  background-color: #007bff;
+  color: white;
+  text-decoration: none;
+  border-radius: 5px;
+  font-size: 16px;
+  transition: background-color 0.3s ease;
+}
+
+.post-new-job-button:hover {
+  background-color: #0056b3;
+}
+
+.job-postings-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.job-postings-table th,
+.job-postings-table td {
+  border: 1px solid #e0e0e0;
+  padding: 12px 15px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.job-postings-table th {
+  background-color: #f8f9fa;
+  color: #333;
+  font-weight: bold;
+}
+
+.job-postings-table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.job-postings-table tbody tr:hover {
+  background-color: #f1f1f1;
+}
+
+.job-postings-table .status-badge {
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: capitalize;
+}
+
+.job-postings-table .status-published {
+  background-color: #d4edda; /* Light green */
+  color: #155724; /* Dark green */
+  border: 1px solid #c3e6cb;
+}
+
+.job-postings-table .status-draft {
+  background-color: #fff3cd; /* Light yellow */
+  color: #856404; /* Dark yellow */
+  border: 1px solid #ffeeba;
+}
+
+.job-postings-table .actions a,
+.job-postings-table .actions button {
+  margin-right: 8px;
+  padding: 6px 12px;
+  text-decoration: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: opacity 0.3s ease;
+}
+
+.job-postings-table .actions a:hover,
+.job-postings-table .actions button:hover {
+  opacity: 0.8;
+}
+
+.job-postings-table .actions .edit-button {
+  background-color: #ffc107; /* Yellow */
+  color: #212529;
+}
+
+.job-postings-table .actions .delete-button {
+  background-color: #dc3545; /* Red */
+  color: white;
+}
+
+.job-postings-table .actions .view-applicants-button {
+  background-color: #17a2b8; /* Teal */
+  color: white;
+}
+
+.loading-jobs,
+.error-loading-jobs,
+.no-jobs-message {
+  text-align: center;
+  padding: 20px;
+  font-size: 18px;
+  color: #555;
+}
+
+.error-loading-jobs {
+  color: #dc3545; /* Red */
+}
