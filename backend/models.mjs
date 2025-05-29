@@ -196,6 +196,7 @@ const createTables = async () => {
         contact_email VARCHAR(100),
         contact_phone VARCHAR(50),
         status VARCHAR(20) DEFAULT 'pending',
+        rejection_reason TEXT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
