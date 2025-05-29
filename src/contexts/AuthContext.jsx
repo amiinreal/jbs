@@ -15,71 +15,79 @@ export const AuthProvider = ({ children }) => {
   // 3. Login function
   const login = (userData) => {
     // Assuming userData from backend is { success: true, token: "...", user: { id: ..., username: ..., ... } }
-    if (userData && userData.token && userData.user) {
+    if (userData && userData.success && userData.user) {
       setCurrentUser(userData.user);
-      setToken(userData.token);
+      // setToken(userData.token); // No longer using token from login response directly
       setIsAuthenticated(true);
-      localStorage.setItem('token', userData.token);
+      localStorage.setItem('sessionActive', 'true'); // Indicate active session
       // Optionally, navigate to a default page after login, e.g., dashboard
       // navigate('/dashboard'); 
     } else {
-      console.error("Login failed: userData structure is incorrect.", userData);
+      console.error("Login failed: userData structure is incorrect or success is false.", userData);
       // Handle incorrect userData structure if necessary
+      // Ensure to clear any session indication if login was attempted but failed
+      localStorage.removeItem('sessionActive');
     }
   };
 
   // 4. Logout function
   const logout = () => {
     setCurrentUser(null);
-    setToken(null);
+    // setToken(null); // Token state no longer primary auth indicator
     setIsAuthenticated(false);
-    localStorage.removeItem('token');
+    localStorage.removeItem('sessionActive'); // Remove session activity flag
     // Redirect to login page or homepage
     navigate('/login'); 
   };
 
   // 5. useEffect hook to check auth status on mount
   useEffect(() => {
-    const verifyTokenAndFetchUser = async () => {
-      const storedToken = localStorage.getItem('token');
-      if (storedToken) {
+    const checkSessionAndFetchUser = async () => {
+      const sessionActive = localStorage.getItem('sessionActive');
+      if (sessionActive === 'true') {
         try {
-          // Use the /api/auth/check endpoint as it seems to serve this purpose
+          // Use the /api/auth/check endpoint
           const response = await fetch('/api/auth/check', { 
             method: 'GET',
             headers: {
-              'Authorization': `Bearer ${storedToken}`,
+              // No Authorization header needed if relying on session cookies
               'Content-Type': 'application/json',
             },
-            credentials: 'include', // Important if session cookies are involved alongside/instead of token
+            credentials: 'include', // Crucial for sending session cookies
           });
 
           if (response.ok) {
             const data = await response.json();
-            if (data.isAuthenticated && data.id) { // Check for a valid user object from /api/auth/check
-              // The backend /api/auth/check endpoint returns user details directly
-              // For example: { isAuthenticated: true, id: ..., username: ..., email: ..., role: ... }
-              login({ user: data, token: storedToken }); // Pass the whole user data object
+            // data from /api/auth/check should be { isAuthenticated: true, user: { id: ..., ... } } or { isAuthenticated: false }
+            if (data.isAuthenticated && data.id) { // data.id is used as a proxy for data.user existing
+                                                      // but better to check for data.user directly if backend sends it
+              // The backend /api/auth/check endpoint returns user details like:
+              // { isAuthenticated: true, id: ..., username: ..., email: ..., role: ... }
+              // We pass 'success: true' as login function expects it.
+              login({ success: true, user: data }); 
             } else {
-              // Token might be invalid or session expired on backend
-              logout(); // Clear client-side auth state
+              // Session might be invalid or expired on backend
+              logout(); // This will clear localStorage 'sessionActive'
             }
           } else {
-            // Backend responded with an error (e.g., 401 Unauthorized)
-            logout(); // Clear client-side auth state
+            // Backend responded with an error (e.g., 401 Unauthorized if session is invalid)
+            logout(); // This will clear localStorage 'sessionActive'
           }
         } catch (error) {
-          console.error('Error verifying token:', error);
-          logout(); // Clear client-side auth state on error
+          console.error('Error checking session:', error);
+          logout(); // This will clear localStorage 'sessionActive'
         }
       } else {
-        setIsAuthenticated(false); // No token found
+        // No active session in localStorage
+        setIsAuthenticated(false); 
         setCurrentUser(null);
+        // Ensure token is also cleared if it somehow exists, though it's not the primary mechanism now
+        // localStorage.removeItem('token'); // This is now handled by logout() if called
       }
       setLoading(false); // Finished initial auth check
     };
 
-    verifyTokenAndFetchUser();
+    checkSessionAndFetchUser();
   }, []); // Empty dependency array means this runs once on mount
 
   // Derived states for convenience (optional, but can be useful)
