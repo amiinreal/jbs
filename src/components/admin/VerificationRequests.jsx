@@ -86,14 +86,14 @@ const VerificationRequests = () => {
     setRejectionReason('');
   };
   
-  const handleVerificationAction = async () => {
-    if (!currentRequest || !action) return;
+  const handleVerificationAction = async (requestToProcess, actionToPerform, reason = '') => {
+    if (!requestToProcess || !actionToPerform) return;
     
     try {
       // Set status to pending for this request
       setActionStatus(prev => ({
         ...prev,
-        [currentRequest.id]: { status: 'pending', action }
+        [requestToProcess.id]: { status: 'pending', action: actionToPerform }
       }));
       
       const response = await fetch('/api/admin/verification-requests/update', {
@@ -103,9 +103,9 @@ const VerificationRequests = () => {
         },
         credentials: 'include',
         body: JSON.stringify({
-          requestId: currentRequest.id,
-          action: action,
-          rejectionReason: action === 'reject' ? rejectionReason : undefined
+          requestId: requestToProcess.id,
+          action: actionToPerform,
+          rejectionReason: actionToPerform === 'reject' ? reason : undefined
         })
       });
       
@@ -117,28 +117,40 @@ const VerificationRequests = () => {
       // Show success status
       setActionStatus(prev => ({
         ...prev,
-        [currentRequest.id]: { status: 'success', action }
+        [requestToProcess.id]: { status: 'success', action: actionToPerform }
       }));
       
       // Update the request status in the UI without a full reload
       setRequests(requests.map(req => 
-        req.id === currentRequest.id 
-          ? { ...req, status: action === 'approve' ? 'approved' : 'rejected' } 
+        req.id === requestToProcess.id 
+          ? { ...req, status: actionToPerform === 'approve' ? 'approved' : 'rejected' } 
           : req
       ));
       
-      // Close the modal after a short delay to show success
-      setTimeout(() => {
-        handleCloseModal();
-        // Clear the status after some time
+      // Close the modal after a short delay if it was open for this action
+      // (specifically for rejections, approvals might not open a modal)
+      if (modalOpen && currentRequest && currentRequest.id === requestToProcess.id) {
+        setTimeout(() => {
+          handleCloseModal();
+          // Clear the status after some time
+          setTimeout(() => {
+            setActionStatus(prev => {
+              const newStatus = {...prev};
+              delete newStatus[requestToProcess.id]; // Use requestToProcess.id
+              return newStatus;
+            });
+          }, 3000);
+        }, 1000);
+      } else {
+         // For actions not involving a modal (like direct approve), clear status sooner
         setTimeout(() => {
           setActionStatus(prev => {
             const newStatus = {...prev};
-            delete newStatus[currentRequest.id];
+            delete newStatus[requestToProcess.id];
             return newStatus;
           });
-        }, 3000);
-      }, 1000);
+        }, 3000); // Or a suitable delay
+      }
       
     } catch (err) {
       console.error('Error processing verification request:', err);
@@ -146,14 +158,14 @@ const VerificationRequests = () => {
       // Show error status
       setActionStatus(prev => ({
         ...prev,
-        [currentRequest.id]: { status: 'error', action, message: err.message }
+        [requestToProcess.id]: { status: 'error', action: actionToPerform, message: err.message }
       }));
       
       // Clear error status after delay
       setTimeout(() => {
         setActionStatus(prev => {
           const newStatus = {...prev};
-          delete newStatus[currentRequest.id];
+          delete newStatus[requestToProcess.id];
           return newStatus;
         });
       }, 5000);
@@ -267,16 +279,13 @@ const VerificationRequests = () => {
           {selectedRequest.status === 'pending' && (
             <div className="verification-actions">
               <button 
-                onClick={() => handleVerificationAction(selectedRequest.id, 'approve')}
+                onClick={() => handleVerificationAction(selectedRequest, 'approve')}
                 className="approve-button"
               >
                 Approve Request
               </button>
               <button 
-                onClick={() => {
-                  setActiveRequest(selectedRequest);
-                  setModalMode('reject');
-                }}
+                onClick={() => handleOpenModal(selectedRequest, 'reject')}
                 className="reject-button"
               >
                 Reject Request
@@ -366,16 +375,13 @@ const VerificationRequests = () => {
                         {request.status === 'pending' && (
                           <>
                             <button 
-                              onClick={() => handleVerificationAction(request.id, 'approve')}
+                              onClick={() => handleVerificationAction(request, 'approve')}
                               className="approve-button"
                             >
                               Approve
                             </button>
                             <button 
-                              onClick={() => {
-                                setActiveRequest(request);
-                                setModalMode('reject');
-                              }}
+                              onClick={() => handleOpenModal(request, 'reject')}
                               className="reject-button"
                             >
                               Reject
@@ -448,7 +454,7 @@ const VerificationRequests = () => {
                   <button 
                     className="confirm-reject-button"
                     disabled={!rejectionReason.trim()}
-                    onClick={handleVerificationAction}
+                    onClick={() => handleVerificationAction(currentRequest, action, rejectionReason)}
                   >
                     Confirm Rejection
                   </button>
