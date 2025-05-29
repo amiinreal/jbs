@@ -145,7 +145,7 @@ const createTables = async () => {
 
       CREATE TABLE IF NOT EXISTS items (
         id SERIAL PRIMARY KEY,
-        name VARCHAR(100),
+        name VARCHAR(100) UNIQUE,
         description TEXT,
         price NUMERIC,
         is_published BOOLEAN DEFAULT FALSE,
