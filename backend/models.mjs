@@ -30,7 +30,9 @@ const createTables = async () => {
         is_verified_company BOOLEAN DEFAULT FALSE,
         company_name VARCHAR(100),
         company_description TEXT,
-        phone_number VARCHAR(50)
+        phone_number VARCHAR(50),
+        logo_url TEXT NULL,
+        logo_file_id INTEGER NULL
       );
 
       CREATE TABLE IF NOT EXISTS job_listings (
@@ -110,6 +112,9 @@ const createTables = async () => {
         square_footage INT,
         is_published BOOLEAN DEFAULT FALSE,
         user_id INT REFERENCES users(id),
+        image_url TEXT NULL,
+        image_urls TEXT[] NULL,
+        primary_image_id INTEGER NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );

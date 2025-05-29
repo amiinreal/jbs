@@ -128,7 +128,7 @@ router.get('/user/listings', checkAuth, async (req, res) => {
     const client = await pool.connect();
     
     // Get all types of listings for the current user
-    const jobsPromise = client.query('SELECT * FROM jobs WHERE user_id = $1', [userId]);
+    const jobsPromise = client.query('SELECT * FROM job_listings WHERE user_id = $1', [userId]);
     const housesPromise = client.query('SELECT * FROM houses WHERE user_id = $1', [userId]);
     const carsPromise = client.query('SELECT * FROM cars WHERE user_id = $1', [userId]);
     const itemsPromise = client.query('SELECT * FROM items WHERE user_id = $1', [userId]);
@@ -1028,7 +1028,7 @@ router.get('/admin/stats', checkAdminMiddleware, async (req, res) => {
         SELECT
           (SELECT COUNT(*) FROM houses) as houses,
           (SELECT COUNT(*) FROM cars) as cars,
-          (SELECT COUNT(*) FROM jobs) as jobs,
+          (SELECT COUNT(*) FROM job_listings) as jobs,
           (SELECT COUNT(*) FROM items) as items
       `);
       
@@ -1229,7 +1229,7 @@ router.get('/admin/listings', checkAdminMiddleware, async (req, res) => {
       
       const jobsResult = await client.query(`
         SELECT j.*, 'job' as type, u.username as owner_username
-        FROM jobs j
+        FROM job_listings j
         JOIN users u ON j.user_id = u.id
       `);
       
@@ -1269,7 +1269,11 @@ router.delete('/admin/listings/:type/:id', checkAdminMiddleware, async (req, res
     }
     
     // Delete the listing
-    await pool.query(`DELETE FROM ${type}s WHERE id = $1`, [id]);
+    let tableName = type + 's';
+    if (type === 'job') {
+      tableName = 'job_listings';
+    }
+    await pool.query(`DELETE FROM ${tableName} WHERE id = $1`, [id]);
     
     res.json({ success: true, message: `${type} listing deleted successfully` });
   } catch (err) {
@@ -1303,7 +1307,7 @@ router.get('/company/profile', checkAuth, async (req, res) => {
     
     // Get total job applications
     const applicationsResult = await pool.query(
-      'SELECT COUNT(*) as total_applications FROM job_applications WHERE job_id IN (SELECT id FROM jobs WHERE user_id = $1)',
+      'SELECT COUNT(*) as total_applications FROM job_applications WHERE job_id IN (SELECT id FROM job_listings WHERE user_id = $1)',
       [userId]
     ).catch(() => ({ rows: [{ total_applications: 0 }] })); // Default if table doesn't exist
     
@@ -1362,7 +1366,7 @@ router.get('/jobs/company', checkAuth, async (req, res) => {
     
     // Get all jobs for this company
     const result = await pool.query(
-      'SELECT * FROM jobs WHERE user_id = $1 ORDER BY created_at DESC',
+      'SELECT * FROM job_listings WHERE user_id = $1 ORDER BY created_at DESC',
       [userId]
     );
     
@@ -1585,6 +1589,45 @@ router.post('/upload/items', checkAuth, async (req, res) => {
     console.error('Error uploading item images:', err);
     res.status(500).json({ success: false, error: 'Failed to upload images' });
   }
+});
+
+// Add a new route for company logo uploads
+router.post('/upload/company_logo', checkAuth, (req, res) => {
+  // Use 'file' as the field name, matching ImageUpload.jsx for single uploads
+  const companyLogoUpload = uploadMiddleware.single('file'); 
+
+  companyLogoUpload(req, res, async (err) => {
+    if (err) {
+      console.error('Company logo upload error:', err);
+      return res.status(400).json({ success: false, error: err.message });
+    }
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No file uploaded for company logo.' });
+    }
+    
+    try {
+      const userId = req.user.id; // Assuming checkAuth populates req.user
+      // Use 'company_logo' or a similar consistent type for registerFile
+      const fileId = await registerFile(req.file, userId, 'company_logo'); 
+      const fileUrl = `/api/files/${fileId}`;
+
+      // It's also good practice to update the user's record with this new logo_file_id
+      // However, CompanyRegistration.jsx might handle this update separately after upload.
+      // For now, just return the fileId and fileUrl.
+      // If direct update is needed:
+      // await pool.query('UPDATE users SET logo_file_id = $1, logo_url = $2 WHERE id = $3', [fileId, fileUrl, userId]);
+
+      res.json({ 
+        success: true, 
+        message: 'Company logo uploaded successfully.',
+        fileId: fileId, 
+        fileUrl: fileUrl // Or use response.urls to be consistent with multi-upload if needed
+      });
+    } catch (uploadErr) {
+      console.error('Error processing company logo upload:', uploadErr);
+      res.status(500).json({ success: false, error: 'Failed to process company logo upload.' });
+    }
+  });
 });
 
 // Get all images for a specific house

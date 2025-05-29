@@ -225,7 +225,7 @@ const CompanyRegistration = ({ user }) => {
             <div className="logo-upload">
               <ImageUpload 
                 onImageUploaded={handleLogoUploaded}
-                entityType="company"
+                entityType="company_logo"
                 multiple={false}
                 isPrimary={true}
               />
@@ -343,7 +343,7 @@ const CompanyRegistration = ({ user }) => {
           <div className="logo-upload">
             <ImageUpload 
               onImageUploaded={handleLogoUploaded}
-              entityType="company"
+                entityType="company_logo"
               multiple={false}
               isPrimary={true}
             />

@@ -101,9 +101,7 @@ const ImageUpload = ({
     
     try {
       // Determine endpoint based on whether it's a single or multiple upload
-      const endpoint = multiple 
-        ? '/api/upload/multiple' 
-        : '/api/upload';
+      const endpoint = `/api/upload/${entityType}`;
       
       const formData = new FormData();
       
