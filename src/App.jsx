@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'; // Keep useEffect for non-auth tasks if any
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'; // Ensure Router is imported if not already
+import { Routes, Route, Navigate } from 'react-router-dom'; // Ensure Router is imported if not already
 import './App.css';
 import './styles/globalStyles.css';
 import ErrorBoundary from './components/ErrorBoundary';

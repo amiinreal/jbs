@@ -3,7 +3,12 @@ import { executeQuery } from '../utils/dbManager.js';
 
 // Check authentication middleware with improved error handling
 export const checkAuthMiddleware = async (req, res, next) => {
-  // middleware implementation
+  if (req.session && req.session.user) {
+    req.user = req.session.user; // Make user info available on req.user
+  } else {
+    req.user = null; // Ensure req.user is explicitly null if not authenticated
+  }
+  next(); // Always call next to proceed to the route handler
 };
 
 // Check admin role middleware

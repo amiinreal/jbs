@@ -680,9 +680,9 @@ router.get('/auth/check', checkAuthMiddleware, async (req, res) => {
     }
   } catch (err) {
     console.error('Error in auth check:', err);
-    res.json({
-      isAuthenticated: true,
-      ...req.user
+    res.status(500).json({ 
+      isAuthenticated: false,
+      error: 'Server error during authentication check'
     });
   }
 });
